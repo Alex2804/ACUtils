@@ -18,8 +18,6 @@
 # define nullptr NULL
 #endif
 
-#include "macros.h"
-
 static inline size_t calculateCapacityGeneric(size_t requiredSize, size_t minCapacity, size_t maxCapacity, size_t multiplier) {
     size_t multiplierExponent, capacity;
     if(requiredSize <= minCapacity)

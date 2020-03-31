@@ -14,7 +14,7 @@
 
 #include "check.h"
 
-#include "../../private/dynarray.h"
+#include "../../dynarray.h"
 
 static size_t dynArrayTestMallocCount = 0;
 static bool dynArrayTestMallocFail = false;
@@ -1699,16 +1699,6 @@ Suite* test_suite_dynarray()
     return s;
 }
 
-
-#include <stdio.h>
-
-static size_t test() {
-    printf("test function!");
-    return 0;
-}
-
-size_t testSize = test();
-
 int main(void)
 {
     int number_failed;
@@ -1723,6 +1713,5 @@ int main(void)
     srunner_run_all(sr, CK_NORMAL);
     number_failed = srunner_ntests_failed(sr);
     srunner_free(sr);
-    test();
     return (number_failed == 0) ? EXIT_SUCCESS : EXIT_FAILURE;
 }
