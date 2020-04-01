@@ -1,21 +1,16 @@
-#ifndef APLUGINSDK_DYNARRAY_H
-#define APLUGINSDK_DYNARRAY_H
+#ifndef CUTILS_DYNARRAY_H
+#define CUTILS_DYNARRAY_H
 
-#ifdef __cplusplus
-# include <cstdlib>
-# include <cstring>
+#include <stdlib.h>
+#include <string.h>
+
+#ifndef __STDC_VERSION__
+#   define __STDC_VERSION__ 0L
+#endif
+#if __STDC_VERSION__ >= 199901L
+#   include <stdbool.h>
 #else
-# include <stdlib.h>
-# include <string.h>
-# ifndef __STDC_VERSION__
-#  define __STDC_VERSION__ 0L
-# endif
-# if __STDC_VERSION__ >= 199901L
-#  include <stdbool.h>
-# else
     typedef enum { false, true } bool;
-# endif
-# define nullptr NULL
 #endif
 
 static inline size_t calculateCapacityGeneric(size_t requiredSize, size_t minCapacity, size_t maxCapacity, size_t multiplier) {
@@ -35,7 +30,7 @@ static inline size_t calculateCapacityDefault(size_t requiredSize) {
 /**
  *
  */
-#define DYNAMIC_ARRAY_DEFINITION(name, type) \
+#define A_DYNAMIC_ARRAY_DEFINITION(name, type) \
     typedef struct name { \
         type* buffer; \
         size_t size; \
@@ -43,22 +38,23 @@ static inline size_t calculateCapacityDefault(size_t requiredSize) {
         size_t(*calculateCapacity)(size_t); \
     } name;
 
+
 /**
  * Constructs a dynamic array of the passed type and initializes it with size 0.
  * The passed dynamic array type must be defined with DYNAMIC_ARRAY_DEFINITION(name, type).
  *
  * @param ArrayType The type of the dynamic array to construct.
  */
-#define dynArrayConstruct(ArrayType) ({ \
+#define aDynArrayConstruct(ArrayType) ({ \
     ArrayType* dynArray = (ArrayType*) malloc(sizeof(ArrayType));\
-    if(dynArray != nullptr) { \
+    if(dynArray != NULL) { \
         dynArray->size = 0; \
         dynArray->calculateCapacity = calculateCapacityDefault; \
         dynArray->capacity = dynArray->calculateCapacity(dynArray->size); \
         dynArray->buffer = malloc(dynArray->capacity * sizeof(*dynArray->buffer)); \
-        if(dynArray->buffer == nullptr) { \
+        if(dynArray->buffer == NULL) { \
             free(dynArray); \
-            dynArray = nullptr; \
+            dynArray = NULL; \
         } \
     } \
     dynArray; \
@@ -69,8 +65,8 @@ static inline size_t calculateCapacityDefault(size_t requiredSize) {
  *
  * @param dynArray The dynamic array to destruct.
  */
-#define dynArrayDestruct(dynArray) ({ \
-    if((dynArray) != nullptr) { \
+#define aDynArrayDestruct(dynArray) ({ \
+    if((dynArray) != NULL) { \
         free((dynArray)->buffer); \
         free(dynArray); \
     } \
@@ -79,8 +75,8 @@ static inline size_t calculateCapacityDefault(size_t requiredSize) {
  * @param dynArray The dynamic array to get the size from.
  * @return The size (number of elements) of the passed dynamic array.
  */
-#define dynArraySize(dynArray) ({ \
-    (dynArray) == nullptr ? 0 : (dynArray)->size; \
+#define aDynArraySize(dynArray) ({ \
+    (dynArray) == NULL ? 0 : (dynArray)->size; \
 })
 
 /**
@@ -98,27 +94,27 @@ static inline size_t calculateCapacityDefault(size_t requiredSize) {
  *
  * @return True if dynArray can hold at least reserveSize count elements after this operation, false if not.
  */
-#define dynArrayReserve(dynArray, reserveSize) ({ \
-    bool dynArrayReserveReturnValue = false; \
-    if((dynArray) != nullptr) { \
-        if((dynArray)->capacity < (reserveSize) || (dynArray)->buffer == nullptr) { \
-            if((dynArray)->calculateCapacity != nullptr) { \
-                void* dynArrayReserveTmpBuffer; \
-                size_t dynArrayReserveAimedCapacity = (dynArray)->calculateCapacity(reserveSize); \
-                if(dynArrayReserveAimedCapacity >= reserveSize) { \
-                    dynArrayReserveTmpBuffer = realloc((dynArray)->buffer, dynArrayReserveAimedCapacity * sizeof(*((dynArray)->buffer))); \
-                    dynArrayReserveReturnValue = (dynArrayReserveTmpBuffer != nullptr); \
-                    if(dynArrayReserveReturnValue) { \
-                        (dynArray)->capacity = dynArrayReserveAimedCapacity; \
-                        (dynArray)->buffer = dynArrayReserveTmpBuffer; \
+#define aDynArrayReserve(dynArray, reserveSize) ({ \
+    bool aDynArrayReserveReturnValue = false; \
+    if((dynArray) != NULL) { \
+        if((dynArray)->capacity < (reserveSize) || (dynArray)->buffer == NULL) { \
+            if((dynArray)->calculateCapacity != NULL) { \
+                void* aDynArrayReserveTmpBuffer; \
+                size_t aDynArrayReserveAimedCapacity = (dynArray)->calculateCapacity(reserveSize); \
+                if(aDynArrayReserveAimedCapacity >= reserveSize) { \
+                    aDynArrayReserveTmpBuffer = realloc((dynArray)->buffer, aDynArrayReserveAimedCapacity * sizeof(*((dynArray)->buffer))); \
+                    aDynArrayReserveReturnValue = (aDynArrayReserveTmpBuffer != NULL); \
+                    if(aDynArrayReserveReturnValue) { \
+                        (dynArray)->capacity = aDynArrayReserveAimedCapacity; \
+                        (dynArray)->buffer = aDynArrayReserveTmpBuffer; \
                     } \
                 } \
             } \
         } else { \
-            dynArrayReserveReturnValue = true; \
+            aDynArrayReserveReturnValue = true; \
         } \
     } \
-    dynArrayReserveReturnValue; \
+    aDynArrayReserveReturnValue; \
 })
 /**
  * Resize dynArray to the minimum size to fit its content (dependent on the resize strategy, which means that the
@@ -128,20 +124,20 @@ static inline size_t calculateCapacityDefault(size_t requiredSize) {
  *
  * @return True if dynArray is small as possible or was successfully resized, false if not.
  */
-#define dynArrayShrinkToFit(dynArray) ({ \
-    bool dynArrayShrinkToFitReturnValue = false; \
-    if((dynArray) != nullptr && (dynArray)->calculateCapacity != nullptr) { \
-        if((dynArray)->capacity > (dynArray)->calculateCapacity((dynArray)->size) || (dynArray)->buffer == nullptr) { \
-            size_t dynArrayShrinkToFitCapacityBackup = (dynArray)->capacity; \
+#define aDynArrayShrinkToFit(dynArray) ({ \
+    bool aDynArrayShrinkToFitReturnValue = false; \
+    if((dynArray) != NULL && (dynArray)->calculateCapacity != NULL) { \
+        if((dynArray)->capacity > (dynArray)->calculateCapacity((dynArray)->size) || (dynArray)->buffer == NULL) { \
+            size_t aDynArrayShrinkToFitCapacityBackup = (dynArray)->capacity; \
             (dynArray)->capacity = ((dynArray)->size == 0) ? 0 : (dynArray)->size - 1; \
-            dynArrayShrinkToFitReturnValue = dynArrayReserve(dynArray, (dynArray)->capacity + 1); \
-            if(!dynArrayShrinkToFitReturnValue) \
-                (dynArray)->capacity = dynArrayShrinkToFitCapacityBackup; \
+            aDynArrayShrinkToFitReturnValue = aDynArrayReserve(dynArray, (dynArray)->capacity + 1); \
+            if(!aDynArrayShrinkToFitReturnValue) \
+                (dynArray)->capacity = aDynArrayShrinkToFitCapacityBackup; \
         } else { \
-            dynArrayShrinkToFitReturnValue = true; \
+            aDynArrayShrinkToFitReturnValue = true; \
         } \
     } \
-    dynArrayShrinkToFitReturnValue; \
+    aDynArrayShrinkToFitReturnValue; \
 })
 /**
  * Clears the content of dynArray and calls dynArrayShrinkToFit(dynArray) after that.
@@ -151,13 +147,13 @@ static inline size_t calculateCapacityDefault(size_t requiredSize) {
  * @return True if dynArray was successfully cleared and shrinked to the minimum possible size, false if only cleared
  * but not shrinked.
  */
-#define dynArrayClear(dynArray) ({ \
-    bool dynArrayClearReturnValue = false; \
-    if((dynArray) != nullptr) { \
+#define aDynArrayClear(dynArray) ({ \
+    bool aDynArrayClearReturnValue = false; \
+    if((dynArray) != NULL) { \
         (dynArray)->size = 0; \
-        dynArrayClearReturnValue = dynArrayShrinkToFit(dynArray); \
+        aDynArrayClearReturnValue = aDynArrayShrinkToFit(dynArray); \
     } \
-    dynArrayClearReturnValue; \
+    aDynArrayClearReturnValue; \
 })
 
 /**
@@ -171,19 +167,19 @@ static inline size_t calculateCapacityDefault(size_t requiredSize) {
  *
  * @return True if the value was inserted successfully, false if not.
  */
-#define dynArrayInsert(dynArray, index, value) ({ \
-    bool dynArrayInsertReturnValue = false; \
-    size_t dynArrayInsertIndex = (index); \
-    if((index) >= 0 && dynArrayReserve(dynArray, (dynArray)->size + 1)) { \
+#define aDynArrayInsert(dynArray, index, value) ({ \
+    bool aDynArrayInsertReturnValue = false; \
+    size_t aDynArrayInsertIndex = (index); \
+    if((index) >= 0 && aDynArrayReserve(dynArray, (dynArray)->size + 1)) { \
         if((index) < (dynArray)->size) \
             memmove((dynArray)->buffer + (index) + 1, (dynArray)->buffer + (index), (dynArray)->size - (index)); \
         else \
-            dynArrayInsertIndex = (dynArray)->size; \
-        (dynArray)->buffer[dynArrayInsertIndex] = (value); \
+            aDynArrayInsertIndex = (dynArray)->size; \
+        (dynArray)->buffer[aDynArrayInsertIndex] = (value); \
         (dynArray)->size += 1; \
-        dynArrayInsertReturnValue = true; \
+        aDynArrayInsertReturnValue = true; \
     } \
-    dynArrayInsertReturnValue; \
+    aDynArrayInsertReturnValue; \
 })
 /**
  * Inserts the elements of array into dynArray at index. If index is bigger or equal to the size of
@@ -199,25 +195,25 @@ static inline size_t calculateCapacityDefault(size_t requiredSize) {
  *
  * @return True if the values were added successfully, false if not.
  */
-#define dynArrayInsertArray(dynArray, index, array, arraySize) ({ \
-    bool dynArrayInsertArrayReturnValue = false; \
-    size_t dynArrayInsertArrayIndex = (index); \
-    if((dynArray) != nullptr && (index) >= 0) { \
-        if((array) != nullptr && (arraySize) > 0) { \
-            if(dynArrayReserve(dynArray, (dynArray)->size + (arraySize))) { \
+#define aDynArrayInsertArray(dynArray, index, array, arraySize) ({ \
+    bool aDynArrayInsertArrayReturnValue = false; \
+    size_t aDynArrayInsertArrayIndex = (index); \
+    if((dynArray) != NULL && (index) >= 0) { \
+        if((array) != NULL && (arraySize) > 0) { \
+            if(aDynArrayReserve(dynArray, (dynArray)->size + (arraySize))) { \
                 if((index) < (dynArray)->size) \
                     memmove((dynArray)->buffer + (index) + (arraySize), (dynArray)->buffer + (index), (dynArray)->size - (index)); \
                 else \
-                    dynArrayInsertArrayIndex = (dynArray)->size; \
-                memcpy((dynArray)->buffer + dynArrayInsertArrayIndex, (array), (arraySize)); \
+                    aDynArrayInsertArrayIndex = (dynArray)->size; \
+                memcpy((dynArray)->buffer + aDynArrayInsertArrayIndex, (array), (arraySize)); \
                 (dynArray)->size += (arraySize); \
-                dynArrayInsertArrayReturnValue = true; \
+                aDynArrayInsertArrayReturnValue = true; \
             } \
         } else { \
-            dynArrayInsertArrayReturnValue = true; \
+            aDynArrayInsertArrayReturnValue = true; \
         } \
     }\
-    dynArrayInsertArrayReturnValue; \
+    aDynArrayInsertArrayReturnValue; \
 })
 /**
  * Inserts the elements of srcDynArray into destDynArray at index. If index is bigger or equal to the size of
@@ -232,8 +228,8 @@ static inline size_t calculateCapacityDefault(size_t requiredSize) {
  *
  * @return True if the values were inserted successfully, false if not.
  */
-#define dynArrayInsertDynArray(destDynArray, index, srcDynArray) ({ \
-    (srcDynArray == nullptr) ? destDynArray != nullptr : dynArrayInsertArray(destDynArray, index, (srcDynArray)->buffer, (srcDynArray)->size); \
+#define aDynArrayInsertDynArray(destDynArray, index, srcDynArray) ({ \
+    (srcDynArray == NULL) ? destDynArray != NULL : aDynArrayInsertArray(destDynArray, index, (srcDynArray)->buffer, (srcDynArray)->size); \
 })
 
 /**
@@ -244,8 +240,8 @@ static inline size_t calculateCapacityDefault(size_t requiredSize) {
  *
  * @return True if the value was added successfully, false if not.
  */
-#define dynArrayAdd(dynArray, value) ({ \
-    dynArrayInsert(dynArray, ((size_t)-1), value); \
+#define aDynArrayAdd(dynArray, value) ({ \
+    aDynArrayInsert(dynArray, ((size_t)-1), value); \
 })
 /**
  * Adds the elements of array to the end of dynArray.
@@ -258,8 +254,8 @@ static inline size_t calculateCapacityDefault(size_t requiredSize) {
  *
  * @return True if the values were added successfully, false if not.
  */
-#define dynArrayAddArray(dynArray, array, arraySize) ({ \
-    dynArrayInsertArray(dynArray, ((size_t)-1), array, arraySize); \
+#define aDynArrayAddArray(dynArray, array, arraySize) ({ \
+    aDynArrayInsertArray(dynArray, ((size_t)-1), array, arraySize); \
 })
 /**
  * Adds the elements of srcDynArray to the end of destDynArray.
@@ -271,8 +267,8 @@ static inline size_t calculateCapacityDefault(size_t requiredSize) {
  *
  * @return True if the values were added successfully, false if not.
  */
-#define dynArrayAddDynArray(destDynArray, srcDynArray) ({ \
-    dynArrayInsertDynArray(destDynArray, ((size_t)-1), srcDynArray); \
+#define aDynArrayAddDynArray(destDynArray, srcDynArray) ({ \
+    aDynArrayInsertDynArray(destDynArray, ((size_t)-1), srcDynArray); \
 })
 
 /**
@@ -285,17 +281,17 @@ static inline size_t calculateCapacityDefault(size_t requiredSize) {
  *
  * @return True if the value was set, false if not.
  */
-#define dynArraySet(dynArray, index, value) ({ \
-    bool dynArraySetReturnValue = false; \
-    if((dynArray) != nullptr) { \
+#define aDynArraySet(dynArray, index, value) ({ \
+    bool aDynArraySetReturnValue = false; \
+    if((dynArray) != NULL) { \
         if((index) < (dynArray)->size) { \
             (dynArray)->buffer[(size_t)index] = value; \
-            dynArraySetReturnValue = true; \
+            aDynArraySetReturnValue = true; \
         } else if((index) >= (dynArray)->size) { \
-            dynArraySetReturnValue = dynArrayAdd(dynArray, value); \
+            aDynArraySetReturnValue = aDynArrayAdd(dynArray, value); \
         } \
     } \
-    dynArraySetReturnValue; \
+    aDynArraySetReturnValue; \
 })
 
 /**
@@ -308,8 +304,8 @@ static inline size_t calculateCapacityDefault(size_t requiredSize) {
  * @param index The start index from which count elements should be removed.
  * @param count The number of elements to remove starting at index.
  */
-#define dynArrayRemove(dynArray, index, count) ({ \
-    if(dynArray != nullptr && count > 0 && index >= 0 && index < (dynArray)->size) { \
+#define aDynArrayRemove(dynArray, index, count) ({ \
+    if(dynArray != NULL && count > 0 && index >= 0 && index < (dynArray)->size) { \
         if(((size_t)(index)) + (count) <= (dynArray)->size) { \
             memmove((dynArray)->buffer + (index), (dynArray)->buffer + (index) + (count), (dynArray)->size - (index) - (count)); \
             (dynArray)->size -= (count); \
@@ -329,8 +325,8 @@ static inline size_t calculateCapacityDefault(size_t requiredSize) {
  *
  * @return The element in dynArray at index.
  */
-#define dynArrayGet(dynArray, index) ({ \
+#define aDynArrayGet(dynArray, index) ({ \
     (dynArray)->buffer[index]; \
 })
 
-#endif //APLUGINSDK_DYNARRAY_H
+#endif //CUTILS_DYNARRAY_H

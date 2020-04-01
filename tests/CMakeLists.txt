@@ -1,9 +1,8 @@
 cmake_minimum_required(VERSION 2.8.12)
-project(APluginSDKTest LANGUAGES C)
+project(CUtilsTest LANGUAGES C)
 
 add_subdirectory(libs/check)
 
-add_executable(APluginSDKTest src/test_dynarray.c)
-target_link_libraries(APluginSDKTest check)
-add_test(NAME APluginLibraryTest COMMAND APluginLibraryTest)
-add_compile_definitions(APluginSDKTest PRIVATE VALGRIND_SUPPORTED)
+add_executable(CUtilsTest src/test_dynarray.c)
+set_property(TARGET CUtilsTest PROPERTY C_STANDARD 90)
+target_link_libraries(CUtilsTest check)

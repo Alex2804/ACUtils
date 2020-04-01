@@ -1,525 +1,513 @@
 #include <string.h>
 
-#if defined(VALGRIND_SUPPORTED)
-# include "valgrind/valgrind.h"
-# define CHECK_DONT_FORK_DYNARRAY_TEST RUNNING_ON_VALGRIND
-#endif
-#ifndef CHECK_DONT_FORK_DYNARRAY_TEST
-# ifndef NDEBUG
-#  define CHECK_DONT_FORK_DYNARRAY_TEST 1
-# else
-#  define CHECK_DONT_FORK_DYNARRAY_TEST 0
-# endif
-#endif
-
 #include "check.h"
 
 #include "../../dynarray.h"
 
-static size_t dynArrayTestMallocCount = 0;
-static bool dynArrayTestMallocFail = false;
-static size_t dynArrayTestReallocCount = 0;
-static bool dynArrayTestReallocFail = false;
-static size_t dynArrayTestFreeCount = 0;
+static size_t aDynArrayTestMallocCount = 0;
+static bool aDynArrayTestMallocFail = false;
+static size_t aDynArrayTestReallocCount = 0;
+static bool aDynArrayTestReallocFail = false;
+static size_t aDynArrayTestFreeCount = 0;
 
-static void* dynArrayTestMalloc(size_t size) {
-    if(!dynArrayTestMallocFail) {
+static void* aDynArrayTestMalloc(size_t size) {
+    if(!aDynArrayTestMallocFail) {
         void* tmp = malloc(size);
-        if(tmp != nullptr)
-            ++dynArrayTestMallocCount;
+        if(tmp != NULL)
+            ++aDynArrayTestMallocCount;
         return tmp;
     } else {
-        return nullptr;
+        return NULL;
     }
 }
-static void* dynArrayTestRealloc(void* ptr, size_t size) {
-    if(!dynArrayTestReallocFail) {
+static void* aDynArrayTestRealloc(void* ptr, size_t size) {
+    if(!aDynArrayTestReallocFail) {
         void* tmp = realloc(ptr, size);
-        if(tmp != nullptr)
-            ++dynArrayTestReallocCount;
+        if(tmp != NULL)
+            ++aDynArrayTestReallocCount;
         return tmp;
     } else {
-        return nullptr;
+        return NULL;
     }
 }
-static void dynArrayTestFree(void* ptr) {
-    ++dynArrayTestFreeCount;
+static void aDynArrayTestFree(void* ptr) {
+    ++aDynArrayTestFreeCount;
     free(ptr);
 }
 
-#define malloc(size) dynArrayTestMalloc(size)
-#define realloc(ptr, size) dynArrayTestRealloc(ptr, size)
-#define free(ptr) dynArrayTestFree(ptr)
+#define malloc(size) aDynArrayTestMalloc(size)
+#define realloc(ptr, size) aDynArrayTestRealloc(ptr, size)
+#define free(ptr) aDynArrayTestFree(ptr)
 
-static const size_t dynArrayTestCapacityMin = 8;
-static const size_t dynArrayTestCapacityMax = 32;
-static const size_t dynArrayTestCapacityMul = 2;
+static const size_t aDynArrayTestCapacityMin = 8;
+static const size_t aDynArrayTestCapacityMax = 32;
+static const size_t aDynArrayTestCapacityMul = 2;
 
 static inline size_t calculateCapacityTest(size_t requiredSize) {
-    return calculateCapacityGeneric(requiredSize, dynArrayTestCapacityMin, dynArrayTestCapacityMax, dynArrayTestCapacityMul);
+    return calculateCapacityGeneric(requiredSize, aDynArrayTestCapacityMin, aDynArrayTestCapacityMax, aDynArrayTestCapacityMul);
 }
 
-DYNAMIC_ARRAY_DEFINITION(DynStringTestArray, char)
+A_DYNAMIC_ARRAY_DEFINITION(DynStringTestArray, char)
 
-START_TEST(test_dynarray_construct_destruct_valid)
+START_TEST(test_aDynArrayConstruct_aDynArrayDestruct_valid)
 {
     DynStringTestArray* array;
-    dynArrayTestMallocFail = false;
-    dynArrayTestMallocCount = dynArrayTestFreeCount = 0;
-    array = dynArrayConstruct(DynStringTestArray);
+    aDynArrayTestMallocFail = false;
+    aDynArrayTestMallocCount = aDynArrayTestFreeCount = 0;
+    array = aDynArrayConstruct(DynStringTestArray);
     ck_assert_uint_eq(array->size, 0);
-    ck_assert_uint_eq(array->capacity, dynArrayTestCapacityMin);
+    ck_assert_uint_eq(array->capacity, aDynArrayTestCapacityMin);
     ck_assert_ptr_nonnull(array->buffer);
     ck_assert_ptr_nonnull(array->calculateCapacity);
-    dynArrayDestruct(array);
-    ck_assert_uint_eq(dynArrayTestMallocCount, dynArrayTestFreeCount);
+    aDynArrayDestruct(array);
+    ck_assert_uint_eq(aDynArrayTestMallocCount, aDynArrayTestFreeCount);
 }
 END_TEST
-START_TEST(test_dynarray_construct_noMemoryAvailable)
+START_TEST(test_aDynArrayConstruct_aDynArrayDestruct_noMemoryAvailable)
 {
     DynStringTestArray* array;
-    dynArrayTestMallocFail = true;
-    dynArrayTestMallocCount = dynArrayTestFreeCount = 0;
-    array = dynArrayConstruct(DynStringTestArray);
+    aDynArrayTestMallocFail = true;
+    aDynArrayTestMallocCount = aDynArrayTestFreeCount = 0;
+    array = aDynArrayConstruct(DynStringTestArray);
     ck_assert_ptr_null(array);
-    dynArrayDestruct(array); // should do nothing
-    ck_assert_uint_eq(dynArrayTestMallocCount, 0);
-    ck_assert_uint_eq(dynArrayTestFreeCount, 0);
+    aDynArrayDestruct(array); // should do nothing
+    ck_assert_uint_eq(aDynArrayTestMallocCount, 0);
+    ck_assert_uint_eq(aDynArrayTestFreeCount, 0);
 }
 END_TEST
-START_TEST(test_dynarray_destruct_nullptr)
+START_TEST(test_aDynArrayConstruct_aDynArrayDestruct_nullptr)
 {
-    DynStringTestArray* array = nullptr;
-    dynArrayTestFreeCount = 0;
-    dynArrayDestruct(array); // should do nothing
-    ck_assert_uint_eq(dynArrayTestFreeCount, 0);
+    DynStringTestArray* array = NULL;
+    aDynArrayTestFreeCount = 0;
+    aDynArrayDestruct(array); // should do nothing
+    ck_assert_uint_eq(aDynArrayTestFreeCount, 0);
 }
 END_TEST
 
 
-START_TEST(test_dynarray_size_valid)
+START_TEST(test_aDynArraySize_valid)
 {
     DynStringTestArray array;
     array.capacity = 0;
-    array.buffer = nullptr;
-    array.calculateCapacity = nullptr;
+    array.buffer = NULL;
+    array.calculateCapacity = NULL;
     array.size = 42;
-    ck_assert_uint_eq(dynArraySize(&array), 42);
+    ck_assert_uint_eq(aDynArraySize(&array), 42);
     array.size = 13;
-    ck_assert_uint_eq(dynArraySize(&array), 13);
+    ck_assert_uint_eq(aDynArraySize(&array), 13);
     array.size = 0;
-    ck_assert_uint_eq(dynArraySize(&array), 0);
+    ck_assert_uint_eq(aDynArraySize(&array), 0);
 }
-START_TEST(test_dynarray_size_nullptr)
+START_TEST(test_aDynArraySize_nullptr)
 {
-    DynStringTestArray* arrayPtr = nullptr;
-    ck_assert_uint_eq(dynArraySize(arrayPtr), 0);
+    DynStringTestArray* arrayPtr = NULL;
+    ck_assert_uint_eq(aDynArraySize(arrayPtr), 0);
 }
 
 
-START_TEST(test_dynarray_reserve_success_enoughCapacityBufferNotNull)
+START_TEST(test_aDynArrayReserve_success_enoughCapacityBufferNotNull)
 {
     DynStringTestArray array;
     array.size = 0;
-    array.calculateCapacity = nullptr;
-    array.capacity = dynArrayTestCapacityMin;
-    dynArrayTestMallocFail = false;
+    array.calculateCapacity = NULL;
+    array.capacity = aDynArrayTestCapacityMin;
+    aDynArrayTestMallocFail = false;
     array.buffer = malloc(array.capacity);
-    dynArrayTestReallocFail = true;
-    ck_assert_uint_eq(dynArrayReserve(&array, array.capacity), true);
+    aDynArrayTestReallocFail = true;
+    ck_assert_uint_eq(aDynArrayReserve(&array, array.capacity), true);
     ck_assert_uint_eq(array.size, 0);
-    ck_assert_uint_eq(array.capacity, dynArrayTestCapacityMin);
+    ck_assert_uint_eq(array.capacity, aDynArrayTestCapacityMin);
     ck_assert_ptr_nonnull(array.buffer);
     ck_assert_ptr_null(array.calculateCapacity);
     free(array.buffer);
 }
-START_TEST(test_dynarray_reserve_success_enoughCapacityBufferNull)
+START_TEST(test_aDynArrayReserve_success_enoughCapacityBufferNull)
 {
     DynStringTestArray array;
     array.size = 0;
     array.calculateCapacity = calculateCapacityTest;
-    array.capacity = dynArrayTestCapacityMin;
-    array.buffer = nullptr;
-    dynArrayTestReallocFail = false;
-    dynArrayTestReallocCount = 0;
-    ck_assert_uint_eq(dynArrayReserve(&array, array.capacity), true);
+    array.capacity = aDynArrayTestCapacityMin;
+    array.buffer = NULL;
+    aDynArrayTestReallocFail = false;
+    aDynArrayTestReallocCount = 0;
+    ck_assert_uint_eq(aDynArrayReserve(&array, array.capacity), true);
     ck_assert_uint_eq(array.size, 0);
-    ck_assert_uint_eq(array.capacity, dynArrayTestCapacityMin);
+    ck_assert_uint_eq(array.capacity, aDynArrayTestCapacityMin);
     ck_assert_ptr_nonnull(array.buffer);
     ck_assert_ptr_nonnull(array.calculateCapacity);
-    ck_assert_uint_eq(dynArrayTestReallocCount, 1);
+    ck_assert_uint_eq(aDynArrayTestReallocCount, 1);
     free(array.buffer);
 }
 END_TEST
-START_TEST(test_dynarray_reserve_success_notEnoughCapacity)
+START_TEST(test_aDynArrayReserve_success_notEnoughCapacity)
 {
     DynStringTestArray array;
     array.size = 0;
     array.calculateCapacity = calculateCapacityTest;
-    array.capacity = dynArrayTestCapacityMin;
-    dynArrayTestMallocFail = false;
+    array.capacity = aDynArrayTestCapacityMin;
+    aDynArrayTestMallocFail = false;
     array.buffer = malloc(array.capacity);
-    dynArrayTestReallocFail = false;
-    dynArrayTestReallocCount = 0;
-    ck_assert_uint_eq(dynArrayReserve(&array, dynArrayTestCapacityMax), true);
+    aDynArrayTestReallocFail = false;
+    aDynArrayTestReallocCount = 0;
+    ck_assert_uint_eq(aDynArrayReserve(&array, aDynArrayTestCapacityMax), true);
     ck_assert_uint_eq(array.size, 0);
-    ck_assert_uint_eq(array.capacity, dynArrayTestCapacityMax);
+    ck_assert_uint_eq(array.capacity, aDynArrayTestCapacityMax);
     ck_assert_ptr_nonnull(array.buffer);
     ck_assert_ptr_nonnull(array.calculateCapacity);
-    ck_assert_uint_eq(dynArrayTestReallocCount, 1);
+    ck_assert_uint_eq(aDynArrayTestReallocCount, 1);
     free(array.buffer);
 }
 END_TEST
-START_TEST(test_dynarray_reserve_failure_biggerThanMaxCapacity)
+START_TEST(test_aDynArrayReserve_failure_biggerThanMaxCapacity)
 {
     DynStringTestArray array;
     array.size = 0;
     array.calculateCapacity = calculateCapacityTest;
-    array.capacity = dynArrayTestCapacityMin;
-    array.buffer = nullptr;
-    dynArrayTestReallocFail = false;
-    dynArrayTestReallocCount = 0;
-    ck_assert_uint_eq(dynArrayReserve(&array, dynArrayTestCapacityMax + 1), false);
+    array.capacity = aDynArrayTestCapacityMin;
+    array.buffer = NULL;
+    aDynArrayTestReallocFail = false;
+    aDynArrayTestReallocCount = 0;
+    ck_assert_uint_eq(aDynArrayReserve(&array, aDynArrayTestCapacityMax + 1), false);
     ck_assert_uint_eq(array.size, 0);
-    ck_assert_uint_eq(array.capacity, dynArrayTestCapacityMin);
+    ck_assert_uint_eq(array.capacity, aDynArrayTestCapacityMin);
     ck_assert_ptr_null(array.buffer);
     ck_assert_ptr_nonnull(array.calculateCapacity);
-    ck_assert_uint_eq(dynArrayTestReallocCount, 0);
+    ck_assert_uint_eq(aDynArrayTestReallocCount, 0);
 }
 END_TEST
-START_TEST(test_dynarray_reserve_failure_noMemoryAvailable)
+START_TEST(test_aDynArrayReserve_failure_noMemoryAvailable)
 {
     DynStringTestArray array;
     array.size = 0;
     array.calculateCapacity = calculateCapacityTest;
-    array.capacity = dynArrayTestCapacityMin;
-    array.buffer = nullptr;
-    dynArrayTestReallocFail = true;
-    ck_assert_uint_eq(dynArrayReserve(&array, dynArrayTestCapacityMax), false);
+    array.capacity = aDynArrayTestCapacityMin;
+    array.buffer = NULL;
+    aDynArrayTestReallocFail = true;
+    ck_assert_uint_eq(aDynArrayReserve(&array, aDynArrayTestCapacityMax), false);
     ck_assert_uint_eq(array.size, 0);
-    ck_assert_uint_eq(array.capacity, dynArrayTestCapacityMin);
+    ck_assert_uint_eq(array.capacity, aDynArrayTestCapacityMin);
     ck_assert_ptr_null(array.buffer);
     ck_assert_ptr_nonnull(array.calculateCapacity);
 }
 END_TEST
-START_TEST(test_dynarray_reserve_failure_calculateCapacityNull)
+START_TEST(test_aDynArrayReserve_failure_calculateCapacityNull)
 {
     DynStringTestArray array;
     array.size = 0;
-    array.calculateCapacity = nullptr;
-    array.capacity = dynArrayTestCapacityMin;
-    array.buffer = nullptr;
-    dynArrayTestReallocFail = false;
-    dynArrayTestReallocCount = 0;
-    ck_assert_uint_eq(dynArrayReserve(&array, dynArrayTestCapacityMax), false);
+    array.calculateCapacity = NULL;
+    array.capacity = aDynArrayTestCapacityMin;
+    array.buffer = NULL;
+    aDynArrayTestReallocFail = false;
+    aDynArrayTestReallocCount = 0;
+    ck_assert_uint_eq(aDynArrayReserve(&array, aDynArrayTestCapacityMax), false);
     ck_assert_uint_eq(array.size, 0);
-    ck_assert_uint_eq(array.capacity, dynArrayTestCapacityMin);
+    ck_assert_uint_eq(array.capacity, aDynArrayTestCapacityMin);
     ck_assert_ptr_null(array.buffer);
     ck_assert_ptr_null(array.calculateCapacity);
-    ck_assert_uint_eq(dynArrayTestReallocCount, 0);
+    ck_assert_uint_eq(aDynArrayTestReallocCount, 0);
 }
 END_TEST
-START_TEST(test_dynarray_reserve_failure_nullptr)
+START_TEST(test_aDynArrayReserve_failure_nullptr)
 {
-    DynStringTestArray* arrayPtr = nullptr;
-    dynArrayTestReallocFail = false;
-    dynArrayTestReallocCount = 0;
-    ck_assert_uint_eq(dynArrayReserve(arrayPtr, dynArrayTestCapacityMax), false);
-    ck_assert_uint_eq(dynArrayTestReallocCount, 0);
+    DynStringTestArray* arrayPtr = NULL;
+    aDynArrayTestReallocFail = false;
+    aDynArrayTestReallocCount = 0;
+    ck_assert_uint_eq(aDynArrayReserve(arrayPtr, aDynArrayTestCapacityMax), false);
+    ck_assert_uint_eq(aDynArrayTestReallocCount, 0);
 }
 END_TEST
 
 
-START_TEST(test_dynarray_shrinkToFit_success_hasLeastCapacityBufferNotNull)
+START_TEST(test_aDynArrayShrinkToFit_success_hasLeastCapacityBufferNotNull)
 {
     DynStringTestArray array;
-    array.size = dynArrayTestCapacityMin - 1;
-    array.capacity = dynArrayTestCapacityMin;
-    dynArrayTestMallocFail = false;
+    array.size = aDynArrayTestCapacityMin - 1;
+    array.capacity = aDynArrayTestCapacityMin;
+    aDynArrayTestMallocFail = false;
     array.buffer = malloc(array.capacity);
     array.calculateCapacity = calculateCapacityTest;
-    dynArrayTestReallocFail = false;
-    dynArrayTestReallocCount = 0;
-    ck_assert_uint_eq(dynArrayShrinkToFit(&array), true);
-    ck_assert_uint_eq(array.size, dynArrayTestCapacityMin - 1);
-    ck_assert_uint_eq(array.capacity, dynArrayTestCapacityMin);
+    aDynArrayTestReallocFail = false;
+    aDynArrayTestReallocCount = 0;
+    ck_assert_uint_eq(aDynArrayShrinkToFit(&array), true);
+    ck_assert_uint_eq(array.size, aDynArrayTestCapacityMin - 1);
+    ck_assert_uint_eq(array.capacity, aDynArrayTestCapacityMin);
     ck_assert_ptr_nonnull(array.buffer);
     ck_assert_ptr_nonnull(array.calculateCapacity);
-    ck_assert_uint_eq(dynArrayTestReallocCount, 0);
+    ck_assert_uint_eq(aDynArrayTestReallocCount, 0);
     free(array.buffer);
 }
-START_TEST(test_dynarray_shrinkToFit_success_hasLeastCapacityBufferNull)
+START_TEST(test_aDynArrayShrinkToFit_success_hasLeastCapacityBufferNull)
 {
     DynStringTestArray array;
-    array.size = dynArrayTestCapacityMin - 1;
-    array.capacity = dynArrayTestCapacityMin;
-    array.buffer = nullptr;
+    array.size = aDynArrayTestCapacityMin - 1;
+    array.capacity = aDynArrayTestCapacityMin;
+    array.buffer = NULL;
     array.calculateCapacity = calculateCapacityTest;
-    dynArrayTestReallocFail = false;
-    dynArrayTestReallocCount = 0;
-    ck_assert_uint_eq(dynArrayShrinkToFit(&array), true);
-    ck_assert_uint_eq(array.size, dynArrayTestCapacityMin - 1);
-    ck_assert_uint_eq(array.capacity, dynArrayTestCapacityMin);
+    aDynArrayTestReallocFail = false;
+    aDynArrayTestReallocCount = 0;
+    ck_assert_uint_eq(aDynArrayShrinkToFit(&array), true);
+    ck_assert_uint_eq(array.size, aDynArrayTestCapacityMin - 1);
+    ck_assert_uint_eq(array.capacity, aDynArrayTestCapacityMin);
     ck_assert_ptr_nonnull(array.buffer);
     ck_assert_ptr_nonnull(array.calculateCapacity);
-    ck_assert_uint_eq(dynArrayTestReallocCount, 1);
-    free(array.buffer);
-}
-END_TEST
-START_TEST(test_dynarray_shrinkToFit_success_hasNotLeastCapacity)
-{
-    DynStringTestArray array;
-    array.size = dynArrayTestCapacityMin - 1;
-    array.capacity = calculateCapacityTest(dynArrayTestCapacityMin + 1);
-    dynArrayTestMallocFail = false;
-    array.buffer = malloc(array.capacity);
-    array.calculateCapacity = calculateCapacityTest;
-    dynArrayTestReallocFail = false;
-    dynArrayTestReallocCount = 0;
-    ck_assert_uint_eq(dynArrayShrinkToFit(&array), true);
-    ck_assert_uint_eq(array.size, dynArrayTestCapacityMin - 1);
-    ck_assert_uint_eq(array.capacity, dynArrayTestCapacityMin);
-    ck_assert_ptr_nonnull(array.buffer);
-    ck_assert_ptr_nonnull(array.calculateCapacity);
-    ck_assert_uint_eq(dynArrayTestReallocCount, 1);
+    ck_assert_uint_eq(aDynArrayTestReallocCount, 1);
     free(array.buffer);
 }
 END_TEST
-START_TEST(test_dynarray_shrinkToFit_failure_noMemoryAvailable)
+START_TEST(test_aDynArrayShrinkToFit_success_hasNotLeastCapacity)
 {
     DynStringTestArray array;
-    array.size = dynArrayTestCapacityMin - 1;
-    array.capacity = calculateCapacityTest(dynArrayTestCapacityMin + 1);
-    dynArrayTestMallocFail = false;
+    array.size = aDynArrayTestCapacityMin - 1;
+    array.capacity = calculateCapacityTest(aDynArrayTestCapacityMin + 1);
+    aDynArrayTestMallocFail = false;
     array.buffer = malloc(array.capacity);
     array.calculateCapacity = calculateCapacityTest;
-    dynArrayTestReallocFail = true;
-    ck_assert_uint_eq(dynArrayShrinkToFit(&array), false);
-    ck_assert_uint_eq(array.size, dynArrayTestCapacityMin - 1);
-    ck_assert_uint_eq(array.capacity, calculateCapacityTest(dynArrayTestCapacityMin + 1));
+    aDynArrayTestReallocFail = false;
+    aDynArrayTestReallocCount = 0;
+    ck_assert_uint_eq(aDynArrayShrinkToFit(&array), true);
+    ck_assert_uint_eq(array.size, aDynArrayTestCapacityMin - 1);
+    ck_assert_uint_eq(array.capacity, aDynArrayTestCapacityMin);
+    ck_assert_ptr_nonnull(array.buffer);
+    ck_assert_ptr_nonnull(array.calculateCapacity);
+    ck_assert_uint_eq(aDynArrayTestReallocCount, 1);
+    free(array.buffer);
+}
+END_TEST
+START_TEST(test_aDynArrayShrinkToFit_failure_noMemoryAvailable)
+{
+    DynStringTestArray array;
+    array.size = aDynArrayTestCapacityMin - 1;
+    array.capacity = calculateCapacityTest(aDynArrayTestCapacityMin + 1);
+    aDynArrayTestMallocFail = false;
+    array.buffer = malloc(array.capacity);
+    array.calculateCapacity = calculateCapacityTest;
+    aDynArrayTestReallocFail = true;
+    ck_assert_uint_eq(aDynArrayShrinkToFit(&array), false);
+    ck_assert_uint_eq(array.size, aDynArrayTestCapacityMin - 1);
+    ck_assert_uint_eq(array.capacity, calculateCapacityTest(aDynArrayTestCapacityMin + 1));
     ck_assert_ptr_nonnull(array.buffer);
     ck_assert_ptr_nonnull(array.calculateCapacity);
     free(array.buffer);
 }
 END_TEST
-START_TEST(test_dynarray_shrinkToFit_failure_calculateCapacityNull)
+START_TEST(test_aDynArrayShrinkToFit_failure_calculateCapacityNull)
 {
     DynStringTestArray array;
-    array.size = dynArrayTestCapacityMin - 1;
-    array.capacity = calculateCapacityTest(dynArrayTestCapacityMin + 1);
-    dynArrayTestMallocFail = false;
+    array.size = aDynArrayTestCapacityMin - 1;
+    array.capacity = calculateCapacityTest(aDynArrayTestCapacityMin + 1);
+    aDynArrayTestMallocFail = false;
     array.buffer = malloc(array.capacity);
-    array.calculateCapacity = nullptr;
-    dynArrayTestReallocFail = false;
-    dynArrayTestReallocCount = 0;
-    ck_assert_uint_eq(dynArrayShrinkToFit(&array), false);
-    ck_assert_uint_eq(array.size, dynArrayTestCapacityMin - 1);
-    ck_assert_uint_eq(array.capacity, calculateCapacityTest(dynArrayTestCapacityMin + 1));
+    array.calculateCapacity = NULL;
+    aDynArrayTestReallocFail = false;
+    aDynArrayTestReallocCount = 0;
+    ck_assert_uint_eq(aDynArrayShrinkToFit(&array), false);
+    ck_assert_uint_eq(array.size, aDynArrayTestCapacityMin - 1);
+    ck_assert_uint_eq(array.capacity, calculateCapacityTest(aDynArrayTestCapacityMin + 1));
     ck_assert_ptr_nonnull(array.buffer);
     ck_assert_ptr_null(array.calculateCapacity);
-    ck_assert_uint_eq(dynArrayTestReallocCount, 0);
+    ck_assert_uint_eq(aDynArrayTestReallocCount, 0);
     free(array.buffer);
 }
 END_TEST
-START_TEST(test_dynarray_shrinkToFit_failure_nullptr)
+START_TEST(test_aDynArrayShrinkToFit_failure_nullptr)
 {
-    DynStringTestArray* arrayPtr = nullptr;
-    dynArrayTestReallocFail = false;
-    dynArrayTestReallocCount = 0;
-    ck_assert_uint_eq(dynArrayShrinkToFit(arrayPtr), false);
-    ck_assert_uint_eq(dynArrayTestReallocCount, 0);
+    DynStringTestArray* arrayPtr = NULL;
+    aDynArrayTestReallocFail = false;
+    aDynArrayTestReallocCount = 0;
+    ck_assert_uint_eq(aDynArrayShrinkToFit(arrayPtr), false);
+    ck_assert_uint_eq(aDynArrayTestReallocCount, 0);
 }
 END_TEST
 
 
-START_TEST(test_dynarray_clear_success_shrinked)
+START_TEST(test_aDynArrayClear_success_shrinked)
 {
     DynStringTestArray array;
-    array.size = dynArrayTestCapacityMin + 1;
+    array.size = aDynArrayTestCapacityMin + 1;
     array.calculateCapacity = calculateCapacityTest;
-    array.capacity = dynArrayTestCapacityMin * dynArrayTestCapacityMul;
-    dynArrayTestMallocFail = false;
+    array.capacity = aDynArrayTestCapacityMin * aDynArrayTestCapacityMul;
+    aDynArrayTestMallocFail = false;
     array.buffer = malloc(array.capacity);
-    dynArrayTestReallocFail = false;
-    dynArrayTestReallocCount = 0;
-    ck_assert_uint_eq(dynArrayClear(&array), true);
+    aDynArrayTestReallocFail = false;
+    aDynArrayTestReallocCount = 0;
+    ck_assert_uint_eq(aDynArrayClear(&array), true);
     ck_assert_uint_eq(array.size, 0);
-    ck_assert_uint_eq(array.capacity, dynArrayTestCapacityMin);
+    ck_assert_uint_eq(array.capacity, aDynArrayTestCapacityMin);
     ck_assert_ptr_nonnull(array.buffer);
     ck_assert_ptr_nonnull(array.calculateCapacity);
-    ck_assert_uint_eq(dynArrayTestReallocCount, 1);
+    ck_assert_uint_eq(aDynArrayTestReallocCount, 1);
     free(array.buffer);
 }
 END_TEST
-START_TEST(test_dynarray_clear_failure_notShrinked)
+START_TEST(test_aDynArrayClear_failure_notShrinked)
 {
     DynStringTestArray array;
-    array.size = dynArrayTestCapacityMin + 1;
+    array.size = aDynArrayTestCapacityMin + 1;
     array.calculateCapacity = calculateCapacityTest;
-    array.capacity = dynArrayTestCapacityMin * dynArrayTestCapacityMul;
-    dynArrayTestMallocFail = false;
+    array.capacity = aDynArrayTestCapacityMin * aDynArrayTestCapacityMul;
+    aDynArrayTestMallocFail = false;
     array.buffer = malloc(array.capacity);
-    dynArrayTestReallocFail = true;
-    ck_assert_uint_eq(dynArrayClear(&array), false);
+    aDynArrayTestReallocFail = true;
+    ck_assert_uint_eq(aDynArrayClear(&array), false);
     ck_assert_uint_eq(array.size, 0);
-    ck_assert_uint_eq(array.capacity, dynArrayTestCapacityMin * dynArrayTestCapacityMul);
+    ck_assert_uint_eq(array.capacity, aDynArrayTestCapacityMin * aDynArrayTestCapacityMul);
     ck_assert_ptr_nonnull(array.buffer);
     free(array.buffer);
 }
 END_TEST
-START_TEST(test_dynarray_clear_failure_nullptr)
+START_TEST(test_aDynArrayClear_failure_nullptr)
 {
-    DynStringTestArray* arrayPtr = nullptr;
-    dynArrayTestReallocFail = false;
-    dynArrayTestReallocCount = 0;
-    ck_assert_uint_eq(dynArrayClear(arrayPtr), false);
-    ck_assert_uint_eq(dynArrayTestReallocCount, 0);
+    DynStringTestArray* arrayPtr = NULL;
+    aDynArrayTestReallocFail = false;
+    aDynArrayTestReallocCount = 0;
+    ck_assert_uint_eq(aDynArrayClear(arrayPtr), false);
+    ck_assert_uint_eq(aDynArrayTestReallocCount, 0);
 }
 END_TEST
 
 
-START_TEST(test_dynarray_insert_success_zeroIndex)
+START_TEST(test_aDynArrayInsert_success_zeroIndex)
 {
     DynStringTestArray array;
     array.size = 5;
     array.calculateCapacity = calculateCapacityTest;
     array.capacity = 8;
-    dynArrayTestMallocFail = false;
+    aDynArrayTestMallocFail = false;
     array.buffer = malloc(array.capacity);
     memcpy(array.buffer, "1234", 5);
-    dynArrayTestReallocFail = false;
-    dynArrayTestReallocCount = 0;
-    ck_assert_uint_eq(dynArrayInsert(&array, 0, '0'), true);
+    aDynArrayTestReallocFail = false;
+    aDynArrayTestReallocCount = 0;
+    ck_assert_uint_eq(aDynArrayInsert(&array, 0, '0'), true);
     ck_assert_uint_eq(array.size, 6);
     ck_assert_uint_eq(array.capacity, 8);
     ck_assert_ptr_nonnull(array.buffer);
     ck_assert_int_eq(array.buffer[0], '0');
     ck_assert_str_eq(array.buffer, "01234");
     ck_assert_ptr_nonnull(array.calculateCapacity);
-    ck_assert_uint_eq(dynArrayTestReallocCount, 0);
+    ck_assert_uint_eq(aDynArrayTestReallocCount, 0);
     free(array.buffer);
 }
 END_TEST
-START_TEST(test_dynarray_insert_success_middleIndex)
+START_TEST(test_aDynArrayInsert_success_middleIndex)
 {
     DynStringTestArray array;
     array.size = 5;
     array.calculateCapacity = calculateCapacityTest;
     array.capacity = 8;
-    dynArrayTestMallocFail = false;
+    aDynArrayTestMallocFail = false;
     array.buffer = malloc(array.capacity);
     memcpy(array.buffer, "0134", 5);
-    dynArrayTestReallocFail = false;
-    dynArrayTestReallocCount = 0;
-    ck_assert_uint_eq(dynArrayInsert(&array, 2, '2'), true);
+    aDynArrayTestReallocFail = false;
+    aDynArrayTestReallocCount = 0;
+    ck_assert_uint_eq(aDynArrayInsert(&array, 2, '2'), true);
     ck_assert_uint_eq(array.size, 6);
     ck_assert_uint_eq(array.capacity, 8);
     ck_assert_ptr_nonnull(array.buffer);
     ck_assert_int_eq(array.buffer[2], '2');
     ck_assert_str_eq(array.buffer, "01234");
     ck_assert_ptr_nonnull(array.calculateCapacity);
-    ck_assert_uint_eq(dynArrayTestReallocCount, 0);
+    ck_assert_uint_eq(aDynArrayTestReallocCount, 0);
     free(array.buffer);
 }
 END_TEST
-START_TEST(test_dynarray_insert_success_endIndex)
+START_TEST(test_aDynArrayInsert_success_endIndex)
 {
     DynStringTestArray array;
     array.size = 5;
     array.calculateCapacity = calculateCapacityTest;
     array.capacity = 8;
-    dynArrayTestMallocFail = false;
+    aDynArrayTestMallocFail = false;
     array.buffer = malloc(array.capacity);
     memcpy(array.buffer, "01234", 5);
-    dynArrayTestReallocFail = false;
-    dynArrayTestReallocCount = 0;
-    ck_assert_uint_eq(dynArrayInsert(&array, 5, '\0'), true);
+    aDynArrayTestReallocFail = false;
+    aDynArrayTestReallocCount = 0;
+    ck_assert_uint_eq(aDynArrayInsert(&array, 5, '\0'), true);
     ck_assert_uint_eq(array.size, 6);
     ck_assert_uint_eq(array.capacity, 8);
     ck_assert_ptr_nonnull(array.buffer);
     ck_assert_int_eq(array.buffer[5], '\0');
     ck_assert_str_eq(array.buffer, "01234");
     ck_assert_ptr_nonnull(array.calculateCapacity);
-    ck_assert_uint_eq(dynArrayTestReallocCount, 0);
+    ck_assert_uint_eq(aDynArrayTestReallocCount, 0);
     free(array.buffer);
 }
 END_TEST
-START_TEST(test_dynarray_insert_success_beyondEndIndex)
+START_TEST(test_aDynArrayInsert_success_beyondEndIndex)
 {
     DynStringTestArray array;
     array.size = 5;
     array.calculateCapacity = calculateCapacityTest;
     array.capacity = 8;
-    dynArrayTestMallocFail = false;
+    aDynArrayTestMallocFail = false;
     array.buffer = malloc(array.capacity);
     memcpy(array.buffer, "01234", 5);
-    dynArrayTestReallocFail = false;
-    dynArrayTestReallocCount = 0;
-    ck_assert_uint_eq(dynArrayInsert(&array, 666, '\0'), true);
+    aDynArrayTestReallocFail = false;
+    aDynArrayTestReallocCount = 0;
+    ck_assert_uint_eq(aDynArrayInsert(&array, 666, '\0'), true);
     ck_assert_uint_eq(array.size, 6);
     ck_assert_uint_eq(array.capacity, 8);
     ck_assert_ptr_nonnull(array.buffer);
     ck_assert_int_eq(array.buffer[5], '\0');
     ck_assert_str_eq(array.buffer, "01234");
     ck_assert_ptr_nonnull(array.calculateCapacity);
-    ck_assert_uint_eq(dynArrayTestReallocCount, 0);
+    ck_assert_uint_eq(aDynArrayTestReallocCount, 0);
     free(array.buffer);
 }
 END_TEST
-START_TEST(test_dynarray_insert_success_bufferExpanded)
+START_TEST(test_aDynArrayInsert_success_bufferExpanded)
 {
     DynStringTestArray array;
     array.size = 5;
     array.calculateCapacity = calculateCapacityTest;
     array.capacity = 5;
-    dynArrayTestMallocFail = false;
+    aDynArrayTestMallocFail = false;
     array.buffer = malloc(array.capacity);
     memcpy(array.buffer, "0134", 5);
-    dynArrayTestReallocFail = false;
-    dynArrayTestReallocCount = 0;
-    ck_assert_uint_eq(dynArrayInsert(&array, 2, '2'), true);
+    aDynArrayTestReallocFail = false;
+    aDynArrayTestReallocCount = 0;
+    ck_assert_uint_eq(aDynArrayInsert(&array, 2, '2'), true);
     ck_assert_uint_eq(array.size, 6);
     ck_assert_uint_eq(array.capacity, 8);
     ck_assert_ptr_nonnull(array.buffer);
     ck_assert_int_eq(array.buffer[2], '2');
     ck_assert_str_eq(array.buffer, "01234");
     ck_assert_ptr_nonnull(array.calculateCapacity);
-    ck_assert_uint_eq(dynArrayTestReallocCount, 1);
+    ck_assert_uint_eq(aDynArrayTestReallocCount, 1);
     free(array.buffer);
 }
 END_TEST
-START_TEST(test_dynarray_insert_failure_negativeIndex)
+START_TEST(test_aDynArrayInsert_failure_negativeIndex)
 {
     DynStringTestArray array;
     array.size = 5;
     array.calculateCapacity = calculateCapacityTest;
     array.capacity = 8;
-    dynArrayTestMallocFail = false;
+    aDynArrayTestMallocFail = false;
     array.buffer = malloc(array.capacity);
     memcpy(array.buffer, "0123", 5);
-    dynArrayTestReallocFail = false;
-    dynArrayTestReallocCount = 0;
-    ck_assert_uint_eq(dynArrayInsert(&array, -1, '-'), false);
+    aDynArrayTestReallocFail = false;
+    aDynArrayTestReallocCount = 0;
+    ck_assert_uint_eq(aDynArrayInsert(&array, -1, '-'), false);
     ck_assert_uint_eq(array.size, 5);
     ck_assert_uint_eq(array.capacity, 8);
     ck_assert_ptr_nonnull(array.buffer);
     ck_assert_str_eq(array.buffer, "0123");
     ck_assert_ptr_nonnull(array.calculateCapacity);
-    ck_assert_uint_eq(dynArrayTestReallocCount, 0);
+    ck_assert_uint_eq(aDynArrayTestReallocCount, 0);
     free(array.buffer);
 }
 END_TEST
-START_TEST(test_dynarray_insert_failure_bufferExpansionFailed)
+START_TEST(test_aDynArrayInsert_failure_bufferExpansionFailed)
 {
     DynStringTestArray array;
     array.size = 5;
     array.calculateCapacity = calculateCapacityTest;
     array.capacity = 5;
-    dynArrayTestMallocFail = false;
+    aDynArrayTestMallocFail = false;
     array.buffer = malloc(array.capacity);
     memcpy(array.buffer, "0134", 5);
-    dynArrayTestReallocFail = true;
-    ck_assert_uint_eq(dynArrayInsert(&array, 2, '2'), false);
+    aDynArrayTestReallocFail = true;
+    ck_assert_uint_eq(aDynArrayInsert(&array, 2, '2'), false);
     ck_assert_uint_eq(array.size, 5);
     ck_assert_uint_eq(array.capacity, 5);
     ck_assert_ptr_nonnull(array.buffer);
@@ -528,197 +516,197 @@ START_TEST(test_dynarray_insert_failure_bufferExpansionFailed)
     free(array.buffer);
 }
 END_TEST
-START_TEST(test_dynarray_insert_failure_nullptr)
+START_TEST(test_aDynArrayInsert_failure_nullptr)
 {
-    DynStringTestArray* arrayPtr = nullptr;
-    dynArrayTestReallocFail = false;
-    dynArrayTestReallocCount = 0;
-    ck_assert_uint_eq(dynArrayInsert(arrayPtr, 0, '0'), false);
-    ck_assert_uint_eq(dynArrayTestReallocCount, 0);
+    DynStringTestArray* arrayPtr = NULL;
+    aDynArrayTestReallocFail = false;
+    aDynArrayTestReallocCount = 0;
+    ck_assert_uint_eq(aDynArrayInsert(arrayPtr, 0, '0'), false);
+    ck_assert_uint_eq(aDynArrayTestReallocCount, 0);
 }
 END_TEST
 
 
-START_TEST(test_dynarray_insertArray_success_zeroIndex)
+START_TEST(test_aDynArrayInsertArray_success_zeroIndex)
 {
     DynStringTestArray array;
     array.size = 5;
     array.calculateCapacity = calculateCapacityTest;
     array.capacity = 8;
-    dynArrayTestMallocFail = false;
+    aDynArrayTestMallocFail = false;
     array.buffer = malloc(array.capacity);
     memcpy(array.buffer, "3456", 5);
-    dynArrayTestReallocFail = false;
-    dynArrayTestReallocCount = 0;
-    ck_assert_uint_eq(dynArrayInsertArray(&array, 0, "012", 3), true);
+    aDynArrayTestReallocFail = false;
+    aDynArrayTestReallocCount = 0;
+    ck_assert_uint_eq(aDynArrayInsertArray(&array, 0, "012", 3), true);
     ck_assert_uint_eq(array.size, 8);
     ck_assert_uint_eq(array.capacity, 8);
     ck_assert_ptr_nonnull(array.buffer);
     ck_assert_str_eq(array.buffer, "0123456");
     ck_assert_ptr_nonnull(array.calculateCapacity);
-    ck_assert_uint_eq(dynArrayTestReallocCount, 0);
+    ck_assert_uint_eq(aDynArrayTestReallocCount, 0);
     free(array.buffer);
 }
 END_TEST
-START_TEST(test_dynarray_insertArray_success_middleIndex)
+START_TEST(test_aDynArrayInsertArray_success_middleIndex)
 {
     DynStringTestArray array;
     array.size = 5;
     array.calculateCapacity = calculateCapacityTest;
     array.capacity = 8;
-    dynArrayTestMallocFail = false;
+    aDynArrayTestMallocFail = false;
     array.buffer = malloc(array.capacity);
     memcpy(array.buffer, "0156", 5);
-    dynArrayTestReallocFail = false;
-    dynArrayTestReallocCount = 0;
-    ck_assert_uint_eq(dynArrayInsertArray(&array, 2, "234", 3), true);
+    aDynArrayTestReallocFail = false;
+    aDynArrayTestReallocCount = 0;
+    ck_assert_uint_eq(aDynArrayInsertArray(&array, 2, "234", 3), true);
     ck_assert_uint_eq(array.size, 8);
     ck_assert_uint_eq(array.capacity, 8);
     ck_assert_ptr_nonnull(array.buffer);
     ck_assert_str_eq(array.buffer, "0123456");
     ck_assert_ptr_nonnull(array.calculateCapacity);
-    ck_assert_uint_eq(dynArrayTestReallocCount, 0);
+    ck_assert_uint_eq(aDynArrayTestReallocCount, 0);
     free(array.buffer);
 }
 END_TEST
-START_TEST(test_dynarray_insertArray_success_endIndex)
+START_TEST(test_aDynArrayInsertArray_success_endIndex)
 {
     DynStringTestArray array;
     array.size = 5;
     array.calculateCapacity = calculateCapacityTest;
     array.capacity = 8;
-    dynArrayTestMallocFail = false;
+    aDynArrayTestMallocFail = false;
     array.buffer = malloc(array.capacity);
     memcpy(array.buffer, "01234", 5);
-    dynArrayTestReallocFail = false;
-    dynArrayTestReallocCount = 0;
-    ck_assert_uint_eq(dynArrayInsertArray(&array, 5, "56\0", 3), true);
+    aDynArrayTestReallocFail = false;
+    aDynArrayTestReallocCount = 0;
+    ck_assert_uint_eq(aDynArrayInsertArray(&array, 5, "56\0", 3), true);
     ck_assert_uint_eq(array.size, 8);
     ck_assert_uint_eq(array.capacity, 8);
     ck_assert_ptr_nonnull(array.buffer);
     ck_assert_str_eq(array.buffer, "0123456");
     ck_assert_ptr_nonnull(array.calculateCapacity);
-    ck_assert_uint_eq(dynArrayTestReallocCount, 0);
+    ck_assert_uint_eq(aDynArrayTestReallocCount, 0);
     free(array.buffer);
 }
 END_TEST
-START_TEST(test_dynarray_insertArray_success_beyondEndIndex)
+START_TEST(test_aDynArrayInsertArray_success_beyondEndIndex)
 {
     DynStringTestArray array;
     array.size = 5;
     array.calculateCapacity = calculateCapacityTest;
     array.capacity = 8;
-    dynArrayTestMallocFail = false;
+    aDynArrayTestMallocFail = false;
     array.buffer = malloc(array.capacity);
     memcpy(array.buffer, "01234", 5);
-    dynArrayTestReallocFail = false;
-    dynArrayTestReallocCount = 0;
-    ck_assert_uint_eq(dynArrayInsertArray(&array, 666, "56\0", 3), true);
+    aDynArrayTestReallocFail = false;
+    aDynArrayTestReallocCount = 0;
+    ck_assert_uint_eq(aDynArrayInsertArray(&array, 666, "56\0", 3), true);
     ck_assert_uint_eq(array.size, 8);
     ck_assert_uint_eq(array.capacity, 8);
     ck_assert_ptr_nonnull(array.buffer);
     ck_assert_str_eq(array.buffer, "0123456");
     ck_assert_ptr_nonnull(array.calculateCapacity);
-    ck_assert_uint_eq(dynArrayTestReallocCount, 0);
+    ck_assert_uint_eq(aDynArrayTestReallocCount, 0);
     free(array.buffer);
 }
 END_TEST
-START_TEST(test_dynarray_insertArray_success_bufferExpanded)
+START_TEST(test_aDynArrayInsertArray_success_bufferExpanded)
 {
     DynStringTestArray array;
     array.size = 5;
     array.calculateCapacity = calculateCapacityTest;
     array.capacity = 5;
-    dynArrayTestMallocFail = false;
+    aDynArrayTestMallocFail = false;
     array.buffer = malloc(array.capacity);
     memcpy(array.buffer, "0156", 5);
-    dynArrayTestReallocFail = false;
-    dynArrayTestReallocCount = 0;
-    ck_assert_uint_eq(dynArrayInsertArray(&array, 2, "234", 3), true);
+    aDynArrayTestReallocFail = false;
+    aDynArrayTestReallocCount = 0;
+    ck_assert_uint_eq(aDynArrayInsertArray(&array, 2, "234", 3), true);
     ck_assert_uint_eq(array.size, 8);
     ck_assert_uint_eq(array.capacity, 8);
     ck_assert_ptr_nonnull(array.buffer);
     ck_assert_str_eq(array.buffer, "0123456");
     ck_assert_ptr_nonnull(array.calculateCapacity);
-    ck_assert_uint_eq(dynArrayTestReallocCount, 1);
+    ck_assert_uint_eq(aDynArrayTestReallocCount, 1);
     free(array.buffer);
 }
 END_TEST
-START_TEST(test_dynarray_insertArray_success_nullptrArray)
+START_TEST(test_aDynArrayInsertArray_success_nullptrArray)
 {
     DynStringTestArray array;
-    char* nullptrArray = nullptr;
+    char* nullptrArray = NULL;
     array.size = 5;
     array.calculateCapacity = calculateCapacityTest;
     array.capacity = 5;
-    dynArrayTestMallocFail = false;
+    aDynArrayTestMallocFail = false;
     array.buffer = malloc(array.capacity);
     memcpy(array.buffer, "0156", 5);
-    dynArrayTestReallocFail = false;
-    dynArrayTestReallocCount = 0;
-    ck_assert_uint_eq(dynArrayInsertArray(&array, 2, nullptrArray, 3), true);
+    aDynArrayTestReallocFail = false;
+    aDynArrayTestReallocCount = 0;
+    ck_assert_uint_eq(aDynArrayInsertArray(&array, 2, nullptrArray, 3), true);
     ck_assert_uint_eq(array.size, 5);
     ck_assert_uint_eq(array.capacity, 5);
     ck_assert_ptr_nonnull(array.buffer);
     ck_assert_str_eq(array.buffer, "0156");
     ck_assert_ptr_nonnull(array.calculateCapacity);
-    ck_assert_uint_eq(dynArrayTestReallocCount, 0);
+    ck_assert_uint_eq(aDynArrayTestReallocCount, 0);
     free(array.buffer);
 }
 END_TEST
-START_TEST(test_dynarray_insertArray_success_zeroArraySize)
+START_TEST(test_aDynArrayInsertArray_success_zeroArraySize)
 {
     DynStringTestArray array;
     array.size = 5;
     array.calculateCapacity = calculateCapacityTest;
     array.capacity = 5;
-    dynArrayTestMallocFail = false;
+    aDynArrayTestMallocFail = false;
     array.buffer = malloc(array.capacity);
     memcpy(array.buffer, "0156", 5);
-    dynArrayTestReallocFail = false;
-    dynArrayTestReallocCount = 0;
-    ck_assert_uint_eq(dynArrayInsertArray(&array, 2, "234", 0), true);
+    aDynArrayTestReallocFail = false;
+    aDynArrayTestReallocCount = 0;
+    ck_assert_uint_eq(aDynArrayInsertArray(&array, 2, "234", 0), true);
     ck_assert_uint_eq(array.size, 5);
     ck_assert_uint_eq(array.capacity, 5);
     ck_assert_ptr_nonnull(array.buffer);
     ck_assert_str_eq(array.buffer, "0156");
     ck_assert_ptr_nonnull(array.calculateCapacity);
-    ck_assert_uint_eq(dynArrayTestReallocCount, 0);
+    ck_assert_uint_eq(aDynArrayTestReallocCount, 0);
     free(array.buffer);
 }
 END_TEST
-START_TEST(test_dynarray_insertArray_failure_negativeIndex)
+START_TEST(test_aDynArrayInsertArray_failure_negativeIndex)
 {
     DynStringTestArray array;
     array.size = 5;
     array.calculateCapacity = calculateCapacityTest;
     array.capacity = 8;
-    dynArrayTestMallocFail = false;
+    aDynArrayTestMallocFail = false;
     array.buffer = malloc(array.capacity);
     memcpy(array.buffer, "0123", 5);
-    dynArrayTestReallocFail = false;
-    dynArrayTestReallocCount = 0;
-    ck_assert_uint_eq(dynArrayInsertArray(&array, -1, "---", 3), false);
+    aDynArrayTestReallocFail = false;
+    aDynArrayTestReallocCount = 0;
+    ck_assert_uint_eq(aDynArrayInsertArray(&array, -1, "---", 3), false);
     ck_assert_uint_eq(array.size, 5);
     ck_assert_uint_eq(array.capacity, 8);
     ck_assert_ptr_nonnull(array.buffer);
     ck_assert_str_eq(array.buffer, "0123");
     ck_assert_ptr_nonnull(array.calculateCapacity);
-    ck_assert_uint_eq(dynArrayTestReallocCount, 0);
+    ck_assert_uint_eq(aDynArrayTestReallocCount, 0);
     free(array.buffer);
 }
 END_TEST
-START_TEST(test_dynarray_insertArray_failure_bufferExpansionFailed)
+START_TEST(test_aDynArrayInsertArray_failure_bufferExpansionFailed)
 {
     DynStringTestArray array;
     array.size = 5;
     array.calculateCapacity = calculateCapacityTest;
     array.capacity = 5;
-    dynArrayTestMallocFail = false;
+    aDynArrayTestMallocFail = false;
     array.buffer = malloc(array.capacity);
     memcpy(array.buffer, "0156", 5);
-    dynArrayTestReallocFail = true;
-    ck_assert_uint_eq(dynArrayInsertArray(&array, 2, "234", 3), false);
+    aDynArrayTestReallocFail = true;
+    ck_assert_uint_eq(aDynArrayInsertArray(&array, 2, "234", 3), false);
     ck_assert_uint_eq(array.size, 5);
     ck_assert_uint_eq(array.capacity, 5);
     ck_assert_ptr_nonnull(array.buffer);
@@ -727,24 +715,24 @@ START_TEST(test_dynarray_insertArray_failure_bufferExpansionFailed)
     free(array.buffer);
 }
 END_TEST
-START_TEST(test_dynarray_insertArray_failure_nullptrDestArray)
+START_TEST(test_aDynArrayInsertArray_failure_nullptrDestArray)
 {
-    DynStringTestArray* arrayPtr = nullptr;
-    dynArrayTestReallocFail = false;
-    dynArrayTestReallocCount = 0;
-    ck_assert_uint_eq(dynArrayInsertArray(arrayPtr, 0, "012", 3), false);
-    ck_assert_uint_eq(dynArrayTestReallocCount, 0);
+    DynStringTestArray* arrayPtr = NULL;
+    aDynArrayTestReallocFail = false;
+    aDynArrayTestReallocCount = 0;
+    ck_assert_uint_eq(aDynArrayInsertArray(arrayPtr, 0, "012", 3), false);
+    ck_assert_uint_eq(aDynArrayTestReallocCount, 0);
 }
 END_TEST
 
 
-START_TEST(test_dynarray_insertDynArray_success_zeroIndex)
+START_TEST(test_aDynArrayInsertDynArray_success_zeroIndex)
 {
     DynStringTestArray destArray, srcArray;
     destArray.size = 5;
     destArray.calculateCapacity = calculateCapacityTest;
     destArray.capacity = 8;
-    dynArrayTestMallocFail = false;
+    aDynArrayTestMallocFail = false;
     destArray.buffer = malloc(destArray.capacity);
     memcpy(destArray.buffer, "3456", 5);
     srcArray.size = 3;
@@ -752,9 +740,9 @@ START_TEST(test_dynarray_insertDynArray_success_zeroIndex)
     srcArray.capacity = 8;
     srcArray.buffer = malloc(srcArray.capacity);
     memcpy(srcArray.buffer, "012\0", 4);
-    dynArrayTestReallocFail = false;
-    dynArrayTestReallocCount = 0;
-    ck_assert_uint_eq(dynArrayInsertDynArray(&destArray, 0, &srcArray), true);
+    aDynArrayTestReallocFail = false;
+    aDynArrayTestReallocCount = 0;
+    ck_assert_uint_eq(aDynArrayInsertDynArray(&destArray, 0, &srcArray), true);
     ck_assert_uint_eq(destArray.size, 8);
     ck_assert_uint_eq(destArray.capacity, 8);
     ck_assert_ptr_nonnull(destArray.buffer);
@@ -765,18 +753,18 @@ START_TEST(test_dynarray_insertDynArray_success_zeroIndex)
     ck_assert_ptr_nonnull(srcArray.buffer);
     ck_assert_str_eq(srcArray.buffer, "012");
     ck_assert_ptr_nonnull(srcArray.calculateCapacity);
-    ck_assert_uint_eq(dynArrayTestReallocCount, 0);
+    ck_assert_uint_eq(aDynArrayTestReallocCount, 0);
     free(destArray.buffer);
     free(srcArray.buffer);
 }
 END_TEST
-START_TEST(test_dynarray_insertDynArray_success_middleIndex)
+START_TEST(test_aDynArrayInsertDynArray_success_middleIndex)
 {
     DynStringTestArray destArray, srcArray;
     destArray.size = 5;
     destArray.calculateCapacity = calculateCapacityTest;
     destArray.capacity = 8;
-    dynArrayTestMallocFail = false;
+    aDynArrayTestMallocFail = false;
     destArray.buffer = malloc(destArray.capacity);
     memcpy(destArray.buffer, "0156", 5);
     srcArray.size = 3;
@@ -784,9 +772,9 @@ START_TEST(test_dynarray_insertDynArray_success_middleIndex)
     srcArray.capacity = 8;
     srcArray.buffer = malloc(srcArray.capacity);
     memcpy(srcArray.buffer, "234\0", 4);
-    dynArrayTestReallocFail = false;
-    dynArrayTestReallocCount = 0;
-    ck_assert_uint_eq(dynArrayInsertDynArray(&destArray, 2, &srcArray), true);
+    aDynArrayTestReallocFail = false;
+    aDynArrayTestReallocCount = 0;
+    ck_assert_uint_eq(aDynArrayInsertDynArray(&destArray, 2, &srcArray), true);
     ck_assert_uint_eq(destArray.size, 8);
     ck_assert_uint_eq(destArray.capacity, 8);
     ck_assert_ptr_nonnull(destArray.buffer);
@@ -797,18 +785,18 @@ START_TEST(test_dynarray_insertDynArray_success_middleIndex)
     ck_assert_ptr_nonnull(srcArray.buffer);
     ck_assert_str_eq(srcArray.buffer, "234");
     ck_assert_ptr_nonnull(srcArray.calculateCapacity);
-    ck_assert_uint_eq(dynArrayTestReallocCount, 0);
+    ck_assert_uint_eq(aDynArrayTestReallocCount, 0);
     free(destArray.buffer);
     free(srcArray.buffer);
 }
 END_TEST
-START_TEST(test_dynarray_insertDynArray_success_endIndex)
+START_TEST(test_aDynArrayInsertDynArray_success_endIndex)
 {
     DynStringTestArray destArray, srcArray;
     destArray.size = 5;
     destArray.calculateCapacity = calculateCapacityTest;
     destArray.capacity = 8;
-    dynArrayTestMallocFail = false;
+    aDynArrayTestMallocFail = false;
     destArray.buffer = malloc(destArray.capacity);
     memcpy(destArray.buffer, "01234", 5);
     srcArray.size = 3;
@@ -816,9 +804,9 @@ START_TEST(test_dynarray_insertDynArray_success_endIndex)
     srcArray.capacity = 8;
     srcArray.buffer = malloc(srcArray.capacity);
     memcpy(srcArray.buffer, "56\0", 4);
-    dynArrayTestReallocFail = false;
-    dynArrayTestReallocCount = 0;
-    ck_assert_uint_eq(dynArrayInsertDynArray(&destArray, 5, &srcArray), true);
+    aDynArrayTestReallocFail = false;
+    aDynArrayTestReallocCount = 0;
+    ck_assert_uint_eq(aDynArrayInsertDynArray(&destArray, 5, &srcArray), true);
     ck_assert_uint_eq(destArray.size, 8);
     ck_assert_uint_eq(destArray.capacity, 8);
     ck_assert_ptr_nonnull(destArray.buffer);
@@ -829,18 +817,18 @@ START_TEST(test_dynarray_insertDynArray_success_endIndex)
     ck_assert_ptr_nonnull(srcArray.buffer);
     ck_assert_str_eq(srcArray.buffer, "56");
     ck_assert_ptr_nonnull(srcArray.calculateCapacity);
-    ck_assert_uint_eq(dynArrayTestReallocCount, 0);
+    ck_assert_uint_eq(aDynArrayTestReallocCount, 0);
     free(destArray.buffer);
     free(srcArray.buffer);
 }
 END_TEST
-START_TEST(test_dynarray_insertDynArray_success_beyondEndIndex)
+START_TEST(test_aDynArrayInsertDynArray_success_beyondEndIndex)
 {
     DynStringTestArray destArray, srcArray;
     destArray.size = 5;
     destArray.calculateCapacity = calculateCapacityTest;
     destArray.capacity = 8;
-    dynArrayTestMallocFail = false;
+    aDynArrayTestMallocFail = false;
     destArray.buffer = malloc(destArray.capacity);
     memcpy(destArray.buffer, "01234", 5);
     srcArray.size = 3;
@@ -848,9 +836,9 @@ START_TEST(test_dynarray_insertDynArray_success_beyondEndIndex)
     srcArray.capacity = 8;
     srcArray.buffer = malloc(srcArray.capacity);
     memcpy(srcArray.buffer, "56", 3);
-    dynArrayTestReallocFail = false;
-    dynArrayTestReallocCount = 0;
-    ck_assert_uint_eq(dynArrayInsertDynArray(&destArray, 666, &srcArray), true);
+    aDynArrayTestReallocFail = false;
+    aDynArrayTestReallocCount = 0;
+    ck_assert_uint_eq(aDynArrayInsertDynArray(&destArray, 666, &srcArray), true);
     ck_assert_uint_eq(destArray.size, 8);
     ck_assert_uint_eq(destArray.capacity, 8);
     ck_assert_ptr_nonnull(destArray.buffer);
@@ -861,18 +849,18 @@ START_TEST(test_dynarray_insertDynArray_success_beyondEndIndex)
     ck_assert_ptr_nonnull(srcArray.buffer);
     ck_assert_str_eq(srcArray.buffer, "56");
     ck_assert_ptr_nonnull(srcArray.calculateCapacity);
-    ck_assert_uint_eq(dynArrayTestReallocCount, 0);
+    ck_assert_uint_eq(aDynArrayTestReallocCount, 0);
     free(destArray.buffer);
     free(srcArray.buffer);
 }
 END_TEST
-START_TEST(test_dynarray_insertDynArray_success_bufferExpanded)
+START_TEST(test_aDynArrayInsertDynArray_success_bufferExpanded)
 {
     DynStringTestArray destArray, srcArray;
     destArray.size = 5;
     destArray.calculateCapacity = calculateCapacityTest;
     destArray.capacity = 5;
-    dynArrayTestMallocFail = false;
+    aDynArrayTestMallocFail = false;
     destArray.buffer = malloc(destArray.capacity);
     memcpy(destArray.buffer, "0156", 5);
     srcArray.size = 3;
@@ -880,9 +868,9 @@ START_TEST(test_dynarray_insertDynArray_success_bufferExpanded)
     srcArray.capacity = 8;
     srcArray.buffer = malloc(srcArray.capacity);
     memcpy(srcArray.buffer, "234", 4);
-    dynArrayTestReallocFail = false;
-    dynArrayTestReallocCount = 0;
-    ck_assert_uint_eq(dynArrayInsertDynArray(&destArray, 2, &srcArray), true);
+    aDynArrayTestReallocFail = false;
+    aDynArrayTestReallocCount = 0;
+    ck_assert_uint_eq(aDynArrayInsertDynArray(&destArray, 2, &srcArray), true);
     ck_assert_uint_eq(destArray.size, 8);
     ck_assert_uint_eq(destArray.capacity, 8);
     ck_assert_ptr_nonnull(destArray.buffer);
@@ -893,48 +881,48 @@ START_TEST(test_dynarray_insertDynArray_success_bufferExpanded)
     ck_assert_ptr_nonnull(srcArray.buffer);
     ck_assert_str_eq(srcArray.buffer, "234");
     ck_assert_ptr_nonnull(srcArray.calculateCapacity);
-    ck_assert_uint_eq(dynArrayTestReallocCount, 1);
+    ck_assert_uint_eq(aDynArrayTestReallocCount, 1);
     free(destArray.buffer);
     free(srcArray.buffer);
 }
 END_TEST
-START_TEST(test_dynarray_insertDynArray_success_nullptrSrcArray)
+START_TEST(test_aDynArrayInsertDynArray_success_nullptrSrcArray)
 {
-    DynStringTestArray destArray, *srcArray = nullptr;
+    DynStringTestArray destArray, *srcArray = NULL;
     destArray.size = 5;
     destArray.calculateCapacity = calculateCapacityTest;
     destArray.capacity = 5;
-    dynArrayTestMallocFail = false;
+    aDynArrayTestMallocFail = false;
     destArray.buffer = malloc(destArray.capacity);
     memcpy(destArray.buffer, "0156", 5);
-    dynArrayTestReallocFail = false;
-    dynArrayTestReallocCount = 0;
-    ck_assert_uint_eq(dynArrayInsertDynArray(&destArray, 2, srcArray), true);
+    aDynArrayTestReallocFail = false;
+    aDynArrayTestReallocCount = 0;
+    ck_assert_uint_eq(aDynArrayInsertDynArray(&destArray, 2, srcArray), true);
     ck_assert_uint_eq(destArray.size, 5);
     ck_assert_uint_eq(destArray.capacity, 5);
     ck_assert_ptr_nonnull(destArray.buffer);
     ck_assert_str_eq(destArray.buffer, "0156");
     ck_assert_ptr_nonnull(destArray.calculateCapacity);
-    ck_assert_uint_eq(dynArrayTestReallocCount, 0);
+    ck_assert_uint_eq(aDynArrayTestReallocCount, 0);
     free(destArray.buffer);
 }
 END_TEST
-START_TEST(test_dynarray_insertDynArray_success_zeroSizeSrcArray)
+START_TEST(test_aDynArrayInsertDynArray_success_zeroSizeSrcArray)
 {
     DynStringTestArray destArray, srcArray;
     destArray.size = 5;
     destArray.calculateCapacity = calculateCapacityTest;
     destArray.capacity = 8;
-    dynArrayTestMallocFail = false;
+    aDynArrayTestMallocFail = false;
     destArray.buffer = malloc(destArray.capacity);
     memcpy(destArray.buffer, "0156", 5);
     srcArray.size = 0;
     srcArray.calculateCapacity = calculateCapacityTest;
     srcArray.capacity = 8;
     srcArray.buffer = malloc(srcArray.capacity);
-    dynArrayTestReallocFail = false;
-    dynArrayTestReallocCount = 0;
-    ck_assert_uint_eq(dynArrayInsertDynArray(&destArray, 2, &srcArray), true);
+    aDynArrayTestReallocFail = false;
+    aDynArrayTestReallocCount = 0;
+    ck_assert_uint_eq(aDynArrayInsertDynArray(&destArray, 2, &srcArray), true);
     ck_assert_uint_eq(destArray.size, 5);
     ck_assert_uint_eq(destArray.capacity, 8);
     ck_assert_ptr_nonnull(destArray.buffer);
@@ -944,18 +932,18 @@ START_TEST(test_dynarray_insertDynArray_success_zeroSizeSrcArray)
     ck_assert_uint_eq(srcArray.capacity, 8);
     ck_assert_ptr_nonnull(srcArray.buffer);
     ck_assert_ptr_nonnull(srcArray.calculateCapacity);
-    ck_assert_uint_eq(dynArrayTestReallocCount, 0);
+    ck_assert_uint_eq(aDynArrayTestReallocCount, 0);
     free(destArray.buffer);
     free(srcArray.buffer);
 }
 END_TEST
-START_TEST(test_dynarray_insertDynArray_failure_negativeIndex)
+START_TEST(test_aDynArrayInsertDynArray_failure_negativeIndex)
 {
     DynStringTestArray destArray, srcArray;
     destArray.size = 5;
     destArray.calculateCapacity = calculateCapacityTest;
     destArray.capacity = 8;
-    dynArrayTestMallocFail = false;
+    aDynArrayTestMallocFail = false;
     destArray.buffer = malloc(destArray.capacity);
     memcpy(destArray.buffer, "0123", 5);
     srcArray.size = 3;
@@ -963,9 +951,9 @@ START_TEST(test_dynarray_insertDynArray_failure_negativeIndex)
     srcArray.capacity = 8;
     srcArray.buffer = malloc(srcArray.capacity);
     memcpy(srcArray.buffer, "---", 4);
-    dynArrayTestReallocFail = false;
-    dynArrayTestReallocCount = 0;
-    ck_assert_uint_eq(dynArrayInsertDynArray(&destArray, -1, &srcArray), false);
+    aDynArrayTestReallocFail = false;
+    aDynArrayTestReallocCount = 0;
+    ck_assert_uint_eq(aDynArrayInsertDynArray(&destArray, -1, &srcArray), false);
     ck_assert_uint_eq(destArray.size, 5);
     ck_assert_uint_eq(destArray.capacity, 8);
     ck_assert_ptr_nonnull(destArray.buffer);
@@ -976,18 +964,18 @@ START_TEST(test_dynarray_insertDynArray_failure_negativeIndex)
     ck_assert_ptr_nonnull(srcArray.buffer);
     ck_assert_str_eq(srcArray.buffer, "---");
     ck_assert_ptr_nonnull(srcArray.calculateCapacity);
-    ck_assert_uint_eq(dynArrayTestReallocCount, 0);
+    ck_assert_uint_eq(aDynArrayTestReallocCount, 0);
     free(destArray.buffer);
     free(srcArray.buffer);
 }
 END_TEST
-START_TEST(test_dynarray_insertDynArray_failure_bufferExpansionFailed)
+START_TEST(test_aDynArrayInsertDynArray_failure_bufferExpansionFailed)
 {
     DynStringTestArray destArray, srcArray;
     destArray.size = 5;
     destArray.calculateCapacity = calculateCapacityTest;
     destArray.capacity = 5;
-    dynArrayTestMallocFail = false;
+    aDynArrayTestMallocFail = false;
     destArray.buffer = malloc(destArray.capacity);
     memcpy(destArray.buffer, "0156", 5);
     srcArray.size = 3;
@@ -995,8 +983,8 @@ START_TEST(test_dynarray_insertDynArray_failure_bufferExpansionFailed)
     srcArray.capacity = 8;
     srcArray.buffer = malloc(srcArray.capacity);
     memcpy(srcArray.buffer, "234", 4);
-    dynArrayTestReallocFail = true;
-    ck_assert_uint_eq(dynArrayInsertDynArray(&destArray, 2, &srcArray), false);
+    aDynArrayTestReallocFail = true;
+    ck_assert_uint_eq(aDynArrayInsertDynArray(&destArray, 2, &srcArray), false);
     ck_assert_uint_eq(destArray.size, 5);
     ck_assert_uint_eq(destArray.capacity, 5);
     ck_assert_ptr_nonnull(destArray.buffer);
@@ -1011,83 +999,83 @@ START_TEST(test_dynarray_insertDynArray_failure_bufferExpansionFailed)
     free(srcArray.buffer);
 }
 END_TEST
-START_TEST(test_dynarray_insertDynArray_failure_nullptrDestArray)
+START_TEST(test_aDynArrayInsertDynArray_failure_nullptrDestArray)
 {
-    DynStringTestArray srcArray, *destArrayPtr = nullptr;
+    DynStringTestArray srcArray, *destArrayPtr = NULL;
     srcArray.size = 3;
     srcArray.calculateCapacity = calculateCapacityTest;
     srcArray.capacity = 8;
     srcArray.buffer = malloc(srcArray.capacity);
     memcpy(srcArray.buffer, "012", 4);
-    dynArrayTestReallocFail = false;
-    dynArrayTestReallocCount = 0;
-    ck_assert_uint_eq(dynArrayInsertDynArray(destArrayPtr, 0, &srcArray), false);
+    aDynArrayTestReallocFail = false;
+    aDynArrayTestReallocCount = 0;
+    ck_assert_uint_eq(aDynArrayInsertDynArray(destArrayPtr, 0, &srcArray), false);
     ck_assert_uint_eq(srcArray.size, 3);
     ck_assert_uint_eq(srcArray.capacity, 8);
     ck_assert_ptr_nonnull(srcArray.buffer);
     ck_assert_str_eq(srcArray.buffer, "012");
     ck_assert_ptr_nonnull(srcArray.calculateCapacity);
-    ck_assert_uint_eq(dynArrayTestReallocCount, 0);
+    ck_assert_uint_eq(aDynArrayTestReallocCount, 0);
     free(srcArray.buffer);
 }
 END_TEST
 
 
-START_TEST(test_dynarray_add_success_enoughCapacity)
+START_TEST(test_aDynArrayAdd_success_enoughCapacity)
 {
     DynStringTestArray array;
     array.size = 5;
     array.calculateCapacity = calculateCapacityTest;
     array.capacity = 8;
-    dynArrayTestMallocFail = false;
+    aDynArrayTestMallocFail = false;
     array.buffer = malloc(array.capacity);
     memcpy(array.buffer, "01234", 5);
-    dynArrayTestReallocFail = false;
-    dynArrayTestReallocCount = 0;
-    ck_assert_uint_eq(dynArrayAdd(&array, '\0'), true);
+    aDynArrayTestReallocFail = false;
+    aDynArrayTestReallocCount = 0;
+    ck_assert_uint_eq(aDynArrayAdd(&array, '\0'), true);
     ck_assert_uint_eq(array.size, 6);
     ck_assert_uint_eq(array.capacity, 8);
     ck_assert_ptr_nonnull(array.buffer);
     ck_assert_int_eq(array.buffer[array.size - 1], '\0');
     ck_assert_str_eq(array.buffer, "01234");
     ck_assert_ptr_nonnull(array.calculateCapacity);
-    ck_assert_uint_eq(dynArrayTestReallocCount, 0);
+    ck_assert_uint_eq(aDynArrayTestReallocCount, 0);
     free(array.buffer);
 }
 END_TEST
-START_TEST(test_dynarray_add_success_notEnoughCapacity)
+START_TEST(test_aDynArrayAdd_success_notEnoughCapacity)
 {
     DynStringTestArray array;
     array.size = 5;
     array.calculateCapacity = calculateCapacityTest;
     array.capacity = 5;
-    dynArrayTestMallocFail = false;
+    aDynArrayTestMallocFail = false;
     array.buffer = malloc(array.capacity);
     memcpy(array.buffer, "01234", 5);
-    dynArrayTestReallocFail = false;
-    dynArrayTestReallocCount = 0;
-    ck_assert_uint_eq(dynArrayAdd(&array, '\0'), true);
+    aDynArrayTestReallocFail = false;
+    aDynArrayTestReallocCount = 0;
+    ck_assert_uint_eq(aDynArrayAdd(&array, '\0'), true);
     ck_assert_uint_eq(array.size, 6);
     ck_assert_uint_eq(array.capacity, 8);
     ck_assert_ptr_nonnull(array.buffer);
     ck_assert_int_eq(array.buffer[array.size - 1], '\0');
     ck_assert_str_eq(array.buffer, "01234");
     ck_assert_ptr_nonnull(array.calculateCapacity);
-    ck_assert_uint_eq(dynArrayTestReallocCount, 1);
+    ck_assert_uint_eq(aDynArrayTestReallocCount, 1);
     free(array.buffer);
 }
 END_TEST
-START_TEST(test_dynarray_add_failure_bufferExpansionFailed)
+START_TEST(test_aDynArrayAdd_failure_bufferExpansionFailed)
 {
     DynStringTestArray array;
     array.size = 5;
     array.calculateCapacity = calculateCapacityTest;
     array.capacity = 5;
-    dynArrayTestMallocFail = false;
+    aDynArrayTestMallocFail = false;
     array.buffer = malloc(array.capacity + 1);
     memcpy(array.buffer, "01234", 6);
-    dynArrayTestReallocFail = true;
-    ck_assert_uint_eq(dynArrayAdd(&array, '\0'), false);
+    aDynArrayTestReallocFail = true;
+    ck_assert_uint_eq(aDynArrayAdd(&array, '\0'), false);
     ck_assert_uint_eq(array.size, 5);
     ck_assert_uint_eq(array.capacity, 5);
     ck_assert_ptr_nonnull(array.buffer);
@@ -1096,113 +1084,113 @@ START_TEST(test_dynarray_add_failure_bufferExpansionFailed)
     free(array.buffer);
 }
 END_TEST
-START_TEST(test_dynarray_add_failure_nullptr)
+START_TEST(test_aDynArrayAdd_failure_nullptr)
 {
-    DynStringTestArray* arrayPtr = nullptr;
-    dynArrayTestReallocFail = false;
-    dynArrayTestReallocCount = 0;
-    ck_assert_uint_eq(dynArrayAdd(arrayPtr, '\0'), false);
-    ck_assert_uint_eq(dynArrayTestReallocCount, 0);
+    DynStringTestArray* arrayPtr = NULL;
+    aDynArrayTestReallocFail = false;
+    aDynArrayTestReallocCount = 0;
+    ck_assert_uint_eq(aDynArrayAdd(arrayPtr, '\0'), false);
+    ck_assert_uint_eq(aDynArrayTestReallocCount, 0);
 }
 END_TEST
 
 
-START_TEST(test_dynarray_addArray_success_enoughCapacity)
+START_TEST(test_aDynArrayAddArray_success_enoughCapacity)
 {
     DynStringTestArray array;
     array.size = 5;
     array.calculateCapacity = calculateCapacityTest;
     array.capacity = 8;
-    dynArrayTestMallocFail = false;
+    aDynArrayTestMallocFail = false;
     array.buffer = malloc(array.capacity);
     memcpy(array.buffer, "01234", 5);
-    dynArrayTestReallocFail = false;
-    dynArrayTestReallocCount = 0;
-    ck_assert_uint_eq(dynArrayAddArray(&array, "56\0", 3), true);
+    aDynArrayTestReallocFail = false;
+    aDynArrayTestReallocCount = 0;
+    ck_assert_uint_eq(aDynArrayAddArray(&array, "56\0", 3), true);
     ck_assert_uint_eq(array.size, 8);
     ck_assert_uint_eq(array.capacity, 8);
     ck_assert_ptr_nonnull(array.buffer);
     ck_assert_str_eq(array.buffer, "0123456");
     ck_assert_ptr_nonnull(array.calculateCapacity);
-    ck_assert_uint_eq(dynArrayTestReallocCount, 0);
+    ck_assert_uint_eq(aDynArrayTestReallocCount, 0);
     free(array.buffer);
 }
 END_TEST
-START_TEST(test_dynarray_addArray_success_notEnoughCapacity)
+START_TEST(test_aDynArrayAddArray_success_notEnoughCapacity)
 {
     DynStringTestArray array;
     array.size = 5;
     array.calculateCapacity = calculateCapacityTest;
     array.capacity = 5;
-    dynArrayTestMallocFail = false;
+    aDynArrayTestMallocFail = false;
     array.buffer = malloc(array.capacity);
     memcpy(array.buffer, "01234", 5);
-    dynArrayTestReallocFail = false;
-    dynArrayTestReallocCount = 0;
-    ck_assert_uint_eq(dynArrayAddArray(&array, "56\0", 3), true);
+    aDynArrayTestReallocFail = false;
+    aDynArrayTestReallocCount = 0;
+    ck_assert_uint_eq(aDynArrayAddArray(&array, "56\0", 3), true);
     ck_assert_uint_eq(array.size, 8);
     ck_assert_uint_eq(array.capacity, 8);
     ck_assert_ptr_nonnull(array.buffer);
     ck_assert_str_eq(array.buffer, "0123456");
     ck_assert_ptr_nonnull(array.calculateCapacity);
-    ck_assert_uint_eq(dynArrayTestReallocCount, 1);
+    ck_assert_uint_eq(aDynArrayTestReallocCount, 1);
     free(array.buffer);
 }
 END_TEST
-START_TEST(test_dynarray_addArray_success_nullptrArray)
+START_TEST(test_aDynArrayAddArray_success_nullptrArray)
 {
     DynStringTestArray array;
-    char* nullptrArray = nullptr;
+    char* nullptrArray = NULL;
     array.size = 5;
     array.calculateCapacity = calculateCapacityTest;
     array.capacity = 5;
-    dynArrayTestMallocFail = false;
+    aDynArrayTestMallocFail = false;
     array.buffer = malloc(array.capacity);
     memcpy(array.buffer, "0156", 5);
-    dynArrayTestReallocFail = false;
-    dynArrayTestReallocCount = 0;
-    ck_assert_uint_eq(dynArrayAddArray(&array, nullptrArray, 3), true);
+    aDynArrayTestReallocFail = false;
+    aDynArrayTestReallocCount = 0;
+    ck_assert_uint_eq(aDynArrayAddArray(&array, nullptrArray, 3), true);
     ck_assert_uint_eq(array.size, 5);
     ck_assert_uint_eq(array.capacity, 5);
     ck_assert_ptr_nonnull(array.buffer);
     ck_assert_str_eq(array.buffer, "0156");
     ck_assert_ptr_nonnull(array.calculateCapacity);
-    ck_assert_uint_eq(dynArrayTestReallocCount, 0);
+    ck_assert_uint_eq(aDynArrayTestReallocCount, 0);
     free(array.buffer);
 }
 END_TEST
-START_TEST(test_dynarray_addArray_success_zeroArraySize)
+START_TEST(test_aDynArrayAddArray_success_zeroArraySize)
 {
     DynStringTestArray array;
     array.size = 5;
     array.calculateCapacity = calculateCapacityTest;
     array.capacity = 5;
-    dynArrayTestMallocFail = false;
+    aDynArrayTestMallocFail = false;
     array.buffer = malloc(array.capacity);
     memcpy(array.buffer, "0156", 5);
-    dynArrayTestReallocFail = false;
-    dynArrayTestReallocCount = 0;
-    ck_assert_uint_eq(dynArrayAddArray(&array, "234", 0), true);
+    aDynArrayTestReallocFail = false;
+    aDynArrayTestReallocCount = 0;
+    ck_assert_uint_eq(aDynArrayAddArray(&array, "234", 0), true);
     ck_assert_uint_eq(array.size, 5);
     ck_assert_uint_eq(array.capacity, 5);
     ck_assert_ptr_nonnull(array.buffer);
     ck_assert_str_eq(array.buffer, "0156");
     ck_assert_ptr_nonnull(array.calculateCapacity);
-    ck_assert_uint_eq(dynArrayTestReallocCount, 0);
+    ck_assert_uint_eq(aDynArrayTestReallocCount, 0);
     free(array.buffer);
 }
 END_TEST
-START_TEST(test_dynarray_addArray_failure_bufferExpansionFailed)
+START_TEST(test_aDynArrayAddArray_failure_bufferExpansionFailed)
 {
     DynStringTestArray array;
     array.size = 5;
     array.calculateCapacity = calculateCapacityTest;
     array.capacity = 5;
-    dynArrayTestMallocFail = false;
+    aDynArrayTestMallocFail = false;
     array.buffer = malloc(array.capacity);
     memcpy(array.buffer, "0123", 5);
-    dynArrayTestReallocFail = true;
-    ck_assert_uint_eq(dynArrayInsertArray(&array, 2, "45\0", 3), false);
+    aDynArrayTestReallocFail = true;
+    ck_assert_uint_eq(aDynArrayInsertArray(&array, 2, "45\0", 3), false);
     ck_assert_uint_eq(array.size, 5);
     ck_assert_uint_eq(array.capacity, 5);
     ck_assert_ptr_nonnull(array.buffer);
@@ -1211,24 +1199,24 @@ START_TEST(test_dynarray_addArray_failure_bufferExpansionFailed)
     free(array.buffer);
 }
 END_TEST
-START_TEST(test_dynarray_addArray_failure_nullptrDestArray)
+START_TEST(test_aDynArrayAddArray_failure_nullptrDestArray)
 {
-    DynStringTestArray* arrayPtr = nullptr;
-    dynArrayTestReallocFail = false;
-    dynArrayTestReallocCount = 0;
-    ck_assert_uint_eq(dynArrayInsertArray(arrayPtr, 0, "012", 3), false);
-    ck_assert_uint_eq(dynArrayTestReallocCount, 0);
+    DynStringTestArray* arrayPtr = NULL;
+    aDynArrayTestReallocFail = false;
+    aDynArrayTestReallocCount = 0;
+    ck_assert_uint_eq(aDynArrayInsertArray(arrayPtr, 0, "012", 3), false);
+    ck_assert_uint_eq(aDynArrayTestReallocCount, 0);
 }
 END_TEST
 
 
-START_TEST(test_dynarray_addDynArray_success_enoughCapacity)
+START_TEST(test_aDynArrayAddDynArray_success_enoughCapacity)
 {
     DynStringTestArray destArray, srcArray;
     destArray.size = 5;
     destArray.calculateCapacity = calculateCapacityTest;
     destArray.capacity = 8;
-    dynArrayTestMallocFail = false;
+    aDynArrayTestMallocFail = false;
     destArray.buffer = malloc(destArray.capacity);
     memcpy(destArray.buffer, "01234", 5);
     srcArray.size = 3;
@@ -1236,9 +1224,9 @@ START_TEST(test_dynarray_addDynArray_success_enoughCapacity)
     srcArray.capacity = 8;
     srcArray.buffer = malloc(srcArray.capacity);
     memcpy(srcArray.buffer, "56", 3);
-    dynArrayTestReallocFail = false;
-    dynArrayTestReallocCount = 0;
-    ck_assert_uint_eq(dynArrayAddDynArray(&destArray, &srcArray), true);
+    aDynArrayTestReallocFail = false;
+    aDynArrayTestReallocCount = 0;
+    ck_assert_uint_eq(aDynArrayAddDynArray(&destArray, &srcArray), true);
     ck_assert_uint_eq(destArray.size, 8);
     ck_assert_uint_eq(destArray.capacity, 8);
     ck_assert_ptr_nonnull(destArray.buffer);
@@ -1249,18 +1237,18 @@ START_TEST(test_dynarray_addDynArray_success_enoughCapacity)
     ck_assert_ptr_nonnull(srcArray.buffer);
     ck_assert_str_eq(srcArray.buffer, "56");
     ck_assert_ptr_nonnull(srcArray.calculateCapacity);
-    ck_assert_uint_eq(dynArrayTestReallocCount, 0);
+    ck_assert_uint_eq(aDynArrayTestReallocCount, 0);
     free(destArray.buffer);
     free(srcArray.buffer);
 }
 END_TEST
-START_TEST(test_dynarray_addDynArray_success_notEnoughCapacity)
+START_TEST(test_aDynArrayAddDynArray_success_notEnoughCapacity)
 {
     DynStringTestArray destArray, srcArray;
     destArray.size = 5;
     destArray.calculateCapacity = calculateCapacityTest;
     destArray.capacity = 5;
-    dynArrayTestMallocFail = false;
+    aDynArrayTestMallocFail = false;
     destArray.buffer = malloc(destArray.capacity);
     memcpy(destArray.buffer, "01234", 5);
     srcArray.size = 3;
@@ -1268,9 +1256,9 @@ START_TEST(test_dynarray_addDynArray_success_notEnoughCapacity)
     srcArray.capacity = 8;
     srcArray.buffer = malloc(srcArray.capacity);
     memcpy(srcArray.buffer, "56", 3);
-    dynArrayTestReallocFail = false;
-    dynArrayTestReallocCount = 0;
-    ck_assert_uint_eq(dynArrayAddDynArray(&destArray, &srcArray), true);
+    aDynArrayTestReallocFail = false;
+    aDynArrayTestReallocCount = 0;
+    ck_assert_uint_eq(aDynArrayAddDynArray(&destArray, &srcArray), true);
     ck_assert_uint_eq(destArray.size, 8);
     ck_assert_uint_eq(destArray.capacity, 8);
     ck_assert_ptr_nonnull(destArray.buffer);
@@ -1281,48 +1269,48 @@ START_TEST(test_dynarray_addDynArray_success_notEnoughCapacity)
     ck_assert_ptr_nonnull(srcArray.buffer);
     ck_assert_str_eq(srcArray.buffer, "56");
     ck_assert_ptr_nonnull(srcArray.calculateCapacity);
-    ck_assert_uint_eq(dynArrayTestReallocCount, 1);
+    ck_assert_uint_eq(aDynArrayTestReallocCount, 1);
     free(destArray.buffer);
     free(srcArray.buffer);
 }
 END_TEST
-START_TEST(test_dynarray_addDynArray_success_nullptrSrcArray)
+START_TEST(test_aDynArrayAddDynArray_success_nullptrSrcArray)
 {
-    DynStringTestArray destArray, *srcArray = nullptr;
+    DynStringTestArray destArray, *srcArray = NULL;
     destArray.size = 5;
     destArray.calculateCapacity = calculateCapacityTest;
     destArray.capacity = 5;
-    dynArrayTestMallocFail = false;
+    aDynArrayTestMallocFail = false;
     destArray.buffer = malloc(destArray.capacity);
     memcpy(destArray.buffer, "0123", 5);
-    dynArrayTestReallocFail = false;
-    dynArrayTestReallocCount = 0;
-    ck_assert_uint_eq(dynArrayAddDynArray(&destArray, srcArray), true);
+    aDynArrayTestReallocFail = false;
+    aDynArrayTestReallocCount = 0;
+    ck_assert_uint_eq(aDynArrayAddDynArray(&destArray, srcArray), true);
     ck_assert_uint_eq(destArray.size, 5);
     ck_assert_uint_eq(destArray.capacity, 5);
     ck_assert_ptr_nonnull(destArray.buffer);
     ck_assert_str_eq(destArray.buffer, "0123");
     ck_assert_ptr_nonnull(destArray.calculateCapacity);
-    ck_assert_uint_eq(dynArrayTestReallocCount, 0);
+    ck_assert_uint_eq(aDynArrayTestReallocCount, 0);
     free(destArray.buffer);
 }
 END_TEST
-START_TEST(test_dynarray_addDynArray_success_zeroSizeSrcArray)
+START_TEST(test_aDynArrayAddDynArray_success_zeroSizeSrcArray)
 {
     DynStringTestArray destArray, srcArray;
     destArray.size = 5;
     destArray.calculateCapacity = calculateCapacityTest;
     destArray.capacity = 8;
-    dynArrayTestMallocFail = false;
+    aDynArrayTestMallocFail = false;
     destArray.buffer = malloc(destArray.capacity);
     memcpy(destArray.buffer, "0123", 5);
     srcArray.size = 0;
     srcArray.calculateCapacity = calculateCapacityTest;
     srcArray.capacity = 8;
     srcArray.buffer = malloc(srcArray.capacity);
-    dynArrayTestReallocFail = false;
-    dynArrayTestReallocCount = 0;
-    ck_assert_uint_eq(dynArrayAddDynArray(&destArray, &srcArray), true);
+    aDynArrayTestReallocFail = false;
+    aDynArrayTestReallocCount = 0;
+    ck_assert_uint_eq(aDynArrayAddDynArray(&destArray, &srcArray), true);
     ck_assert_uint_eq(destArray.size, 5);
     ck_assert_uint_eq(destArray.capacity, 8);
     ck_assert_ptr_nonnull(destArray.buffer);
@@ -1332,18 +1320,18 @@ START_TEST(test_dynarray_addDynArray_success_zeroSizeSrcArray)
     ck_assert_uint_eq(srcArray.capacity, 8);
     ck_assert_ptr_nonnull(srcArray.buffer);
     ck_assert_ptr_nonnull(srcArray.calculateCapacity);
-    ck_assert_uint_eq(dynArrayTestReallocCount, 0);
+    ck_assert_uint_eq(aDynArrayTestReallocCount, 0);
     free(destArray.buffer);
     free(srcArray.buffer);
 }
 END_TEST
-START_TEST(test_dynarray_addDynArray_failure_bufferExpansionFailed)
+START_TEST(test_aDynArrayAddDynArray_failure_bufferExpansionFailed)
 {
     DynStringTestArray destArray, srcArray;
     destArray.size = 5;
     destArray.calculateCapacity = calculateCapacityTest;
     destArray.capacity = 5;
-    dynArrayTestMallocFail = false;
+    aDynArrayTestMallocFail = false;
     destArray.buffer = malloc(destArray.capacity);
     memcpy(destArray.buffer, "0156", 5);
     srcArray.size = 3;
@@ -1351,8 +1339,8 @@ START_TEST(test_dynarray_addDynArray_failure_bufferExpansionFailed)
     srcArray.capacity = 8;
     srcArray.buffer = malloc(srcArray.capacity);
     memcpy(srcArray.buffer, "234", 4);
-    dynArrayTestReallocFail = true;
-    ck_assert_uint_eq(dynArrayAddDynArray(&destArray, &srcArray), false);
+    aDynArrayTestReallocFail = true;
+    ck_assert_uint_eq(aDynArrayAddDynArray(&destArray, &srcArray), false);
     ck_assert_uint_eq(destArray.size, 5);
     ck_assert_uint_eq(destArray.capacity, 5);
     ck_assert_ptr_nonnull(destArray.buffer);
@@ -1367,29 +1355,29 @@ START_TEST(test_dynarray_addDynArray_failure_bufferExpansionFailed)
     free(srcArray.buffer);
 }
 END_TEST
-START_TEST(test_dynarray_addDynArray_failure_nullptrDestArray)
+START_TEST(test_aDynArrayAddDynArray_failure_nullptrDestArray)
 {
-    DynStringTestArray srcArray, *destArrayPtr = nullptr;
+    DynStringTestArray srcArray, *destArrayPtr = NULL;
     srcArray.size = 3;
     srcArray.calculateCapacity = calculateCapacityTest;
     srcArray.capacity = 8;
     srcArray.buffer = malloc(srcArray.capacity);
     memcpy(srcArray.buffer, "012", 4);
-    dynArrayTestReallocFail = false;
-    dynArrayTestReallocCount = 0;
-    ck_assert_uint_eq(dynArrayAddDynArray(destArrayPtr, &srcArray), false);
+    aDynArrayTestReallocFail = false;
+    aDynArrayTestReallocCount = 0;
+    ck_assert_uint_eq(aDynArrayAddDynArray(destArrayPtr, &srcArray), false);
     ck_assert_uint_eq(srcArray.size, 3);
     ck_assert_uint_eq(srcArray.capacity, 8);
     ck_assert_ptr_nonnull(srcArray.buffer);
     ck_assert_str_eq(srcArray.buffer, "012");
     ck_assert_ptr_nonnull(srcArray.calculateCapacity);
-    ck_assert_uint_eq(dynArrayTestReallocCount, 0);
+    ck_assert_uint_eq(aDynArrayTestReallocCount, 0);
     free(srcArray.buffer);
 }
 END_TEST
 
 
-START_TEST(test_dynarray_set_success_indexInBounds)
+START_TEST(test_aDynArraySet_success_indexInBounds)
 {
     DynStringTestArray array;
     array.size = 4;
@@ -1397,21 +1385,21 @@ START_TEST(test_dynarray_set_success_indexInBounds)
     array.capacity = 4;
     array.buffer = malloc(array.capacity);
     memcpy(array.buffer, "012", 4);
-    dynArrayTestReallocFail = false;
-    dynArrayTestReallocCount = 0;
-    ck_assert_uint_eq(dynArraySet(&array, 0, '2'), true);
-    ck_assert_uint_eq(dynArraySet(&array, 1, '1'), true);
-    ck_assert_uint_eq(dynArraySet(&array, 2, '0'), true);
+    aDynArrayTestReallocFail = false;
+    aDynArrayTestReallocCount = 0;
+    ck_assert_uint_eq(aDynArraySet(&array, 0, '2'), true);
+    ck_assert_uint_eq(aDynArraySet(&array, 1, '1'), true);
+    ck_assert_uint_eq(aDynArraySet(&array, 2, '0'), true);
     ck_assert_uint_eq(array.size, 4);
     ck_assert_uint_eq(array.capacity, 4);
     ck_assert_ptr_nonnull(array.buffer);
     ck_assert_str_eq(array.buffer, "210");
     ck_assert_ptr_nonnull(array.calculateCapacity);
-    ck_assert_uint_eq(dynArrayTestReallocCount, 0);
+    ck_assert_uint_eq(aDynArrayTestReallocCount, 0);
     free(array.buffer);
 }
 END_TEST
-START_TEST(test_dynarray_set_success_indexBeyondSize)
+START_TEST(test_aDynArraySet_success_indexBeyondSize)
 {
     DynStringTestArray array;
     array.size = 3;
@@ -1419,19 +1407,19 @@ START_TEST(test_dynarray_set_success_indexBeyondSize)
     array.capacity = 4;
     array.buffer = malloc(array.capacity + 1);
     memcpy(array.buffer, "012\0\0", 5);
-    dynArrayTestReallocFail = true;
-    dynArrayTestReallocCount = 0;
-    ck_assert_uint_eq(dynArraySet(&array, 3, '3'), true);
+    aDynArrayTestReallocFail = true;
+    aDynArrayTestReallocCount = 0;
+    ck_assert_uint_eq(aDynArraySet(&array, 3, '3'), true);
     ck_assert_uint_eq(array.size, 4);
     ck_assert_uint_eq(array.capacity, 4);
     ck_assert_ptr_nonnull(array.buffer);
     ck_assert_str_eq(array.buffer, "0123");
     ck_assert_ptr_nonnull(array.calculateCapacity);
-    ck_assert_uint_eq(dynArrayTestReallocCount, 0);
+    ck_assert_uint_eq(aDynArrayTestReallocCount, 0);
     free(array.buffer);
 }
 END_TEST
-START_TEST(test_dynarray_set_success_indexBeyondSize_bufferExpanded)
+START_TEST(test_aDynArraySet_success_indexBeyondSize_bufferExpanded)
 {
     DynStringTestArray array;
     array.size = 3;
@@ -1439,19 +1427,19 @@ START_TEST(test_dynarray_set_success_indexBeyondSize_bufferExpanded)
     array.capacity = 3;
     array.buffer = malloc(array.capacity + 2);
     memcpy(array.buffer, "012\0\0", 5);
-    dynArrayTestReallocFail = false;
-    dynArrayTestReallocCount = 0;
-    ck_assert_uint_eq(dynArraySet(&array, 3, '3'), true);
+    aDynArrayTestReallocFail = false;
+    aDynArrayTestReallocCount = 0;
+    ck_assert_uint_eq(aDynArraySet(&array, 3, '3'), true);
     ck_assert_uint_eq(array.size, 4);
     ck_assert_uint_eq(array.capacity, 8);
     ck_assert_ptr_nonnull(array.buffer);
     ck_assert_str_eq(array.buffer, "0123");
     ck_assert_ptr_nonnull(array.calculateCapacity);
-    ck_assert_uint_eq(dynArrayTestReallocCount, 1);
+    ck_assert_uint_eq(aDynArrayTestReallocCount, 1);
     free(array.buffer);
 }
 END_TEST
-START_TEST(test_dynarray_set_failure_indexBeyondSize_bufferExpansionFailed)
+START_TEST(test_aDynArraySet_failure_indexBeyondSize_bufferExpansionFailed)
 {
     DynStringTestArray array;
     array.size = 3;
@@ -1459,8 +1447,8 @@ START_TEST(test_dynarray_set_failure_indexBeyondSize_bufferExpansionFailed)
     array.capacity = 3;
     array.buffer = malloc(array.capacity + 1);
     memcpy(array.buffer, "012", 4);
-    dynArrayTestReallocFail = true;
-    ck_assert_uint_eq(dynArraySet(&array, 3, '3'), false);
+    aDynArrayTestReallocFail = true;
+    ck_assert_uint_eq(aDynArraySet(&array, 3, '3'), false);
     ck_assert_uint_eq(array.size, 3);
     ck_assert_uint_eq(array.capacity, 3);
     ck_assert_ptr_nonnull(array.buffer);
@@ -1469,18 +1457,18 @@ START_TEST(test_dynarray_set_failure_indexBeyondSize_bufferExpansionFailed)
     free(array.buffer);
 }
 END_TEST
-START_TEST(test_dynarray_set_failure_nullptr)
+START_TEST(test_aDynArraySet_failure_nullptr)
 {
-    DynStringTestArray *arrayPtr = nullptr;
-    dynArrayTestReallocFail = false;
-    dynArrayTestReallocCount = 0;
-    ck_assert_uint_eq(dynArraySet(arrayPtr, 0, '0'), false);
-    ck_assert_uint_eq(dynArrayTestReallocCount, 0);
+    DynStringTestArray *arrayPtr = NULL;
+    aDynArrayTestReallocFail = false;
+    aDynArrayTestReallocCount = 0;
+    ck_assert_uint_eq(aDynArraySet(arrayPtr, 0, '0'), false);
+    ck_assert_uint_eq(aDynArrayTestReallocCount, 0);
 }
 END_TEST
 
 
-START_TEST(test_dynarray_remove_indexRangeInBounds)
+START_TEST(test_aDynArrayRemove_indexRangeInBounds)
 {
     DynStringTestArray array;
     array.size = 11;
@@ -1488,19 +1476,19 @@ START_TEST(test_dynarray_remove_indexRangeInBounds)
     array.capacity = 16;
     array.buffer = malloc(array.capacity + 1);
     memcpy(array.buffer, "0123456789", 11);
-    dynArrayTestReallocFail = false;
-    dynArrayTestReallocCount = 0;
-    dynArrayRemove(&array, 2, 6);
+    aDynArrayTestReallocFail = false;
+    aDynArrayTestReallocCount = 0;
+    aDynArrayRemove(&array, 2, 6);
     ck_assert_uint_eq(array.size, 5);
     ck_assert_uint_eq(array.capacity, 16);
     ck_assert_ptr_nonnull(array.buffer);
     ck_assert_str_eq(array.buffer, "0189");
     ck_assert_ptr_nonnull(array.calculateCapacity);
-    ck_assert_uint_eq(dynArrayTestReallocCount, 0);
+    ck_assert_uint_eq(aDynArrayTestReallocCount, 0);
     free(array.buffer);
 }
 END_TEST
-START_TEST(test_dynarray_remove_rangeBeyondBounds)
+START_TEST(test_aDynArrayRemove_rangeBeyondBounds)
 {
     DynStringTestArray array;
     array.size = 11;
@@ -1508,18 +1496,18 @@ START_TEST(test_dynarray_remove_rangeBeyondBounds)
     array.capacity = 16;
     array.buffer = malloc(array.capacity + 1);
     memcpy(array.buffer, "0123456789", 11);
-    dynArrayTestReallocFail = false;
-    dynArrayTestReallocCount = 0;
-    dynArrayRemove(&array, 2, 100);
+    aDynArrayTestReallocFail = false;
+    aDynArrayTestReallocCount = 0;
+    aDynArrayRemove(&array, 2, 100);
     ck_assert_uint_eq(array.size, 2);
     ck_assert_uint_eq(array.capacity, 16);
     ck_assert_ptr_nonnull(array.buffer);
     ck_assert_ptr_nonnull(array.calculateCapacity);
-    ck_assert_uint_eq(dynArrayTestReallocCount, 0);
+    ck_assert_uint_eq(aDynArrayTestReallocCount, 0);
     free(array.buffer);
 }
 END_TEST
-START_TEST(test_dynarray_remove_zeroRange)
+START_TEST(test_aDynArrayRemove_zeroRange)
 {
     DynStringTestArray array;
     array.size = 11;
@@ -1527,19 +1515,19 @@ START_TEST(test_dynarray_remove_zeroRange)
     array.capacity = 16;
     array.buffer = malloc(array.capacity + 1);
     memcpy(array.buffer, "0123456789", 11);
-    dynArrayTestReallocFail = false;
-    dynArrayTestReallocCount = 0;
-    dynArrayRemove(&array, 2, 0);
+    aDynArrayTestReallocFail = false;
+    aDynArrayTestReallocCount = 0;
+    aDynArrayRemove(&array, 2, 0);
     ck_assert_uint_eq(array.size, 11);
     ck_assert_uint_eq(array.capacity, 16);
     ck_assert_ptr_nonnull(array.buffer);
     ck_assert_str_eq(array.buffer, "0123456789");
     ck_assert_ptr_nonnull(array.calculateCapacity);
-    ck_assert_uint_eq(dynArrayTestReallocCount, 0);
+    ck_assert_uint_eq(aDynArrayTestReallocCount, 0);
     free(array.buffer);
 }
 END_TEST
-START_TEST(test_dynarray_remove_indexBeyoundBounds)
+START_TEST(test_aDynArrayRemove_indexBeyoundBounds)
 {
     DynStringTestArray array;
     array.size = 11;
@@ -1547,25 +1535,25 @@ START_TEST(test_dynarray_remove_indexBeyoundBounds)
     array.capacity = 16;
     array.buffer = malloc(array.capacity + 1);
     memcpy(array.buffer, "0123456789", 11);
-    dynArrayTestReallocFail = false;
-    dynArrayTestReallocCount = 0;
-    dynArrayRemove(&array, 13, 5);
+    aDynArrayTestReallocFail = false;
+    aDynArrayTestReallocCount = 0;
+    aDynArrayRemove(&array, 13, 5);
     ck_assert_uint_eq(array.size, 11);
     ck_assert_uint_eq(array.capacity, 16);
     ck_assert_ptr_nonnull(array.buffer);
     ck_assert_str_eq(array.buffer, "0123456789");
     ck_assert_ptr_nonnull(array.calculateCapacity);
-    ck_assert_uint_eq(dynArrayTestReallocCount, 0);
+    ck_assert_uint_eq(aDynArrayTestReallocCount, 0);
     free(array.buffer);
 }
 END_TEST
-START_TEST(test_dynarray_remove_nullptr)
+START_TEST(test_aDynArrayRemove_nullptr)
 {
-    DynStringTestArray *arrayPtr = nullptr;
-    dynArrayTestReallocFail = false;
-    dynArrayTestReallocCount = 0;
-    dynArrayRemove(arrayPtr, 5, 10);
-    ck_assert_uint_eq(dynArrayTestReallocCount, 0);
+    DynStringTestArray *arrayPtr = NULL;
+    aDynArrayTestReallocFail = false;
+    aDynArrayTestReallocCount = 0;
+    aDynArrayRemove(arrayPtr, 5, 10);
+    ck_assert_uint_eq(aDynArrayTestReallocCount, 0);
 }
 END_TEST
 
@@ -1574,127 +1562,127 @@ END_TEST
 Suite* test_suite_dynarray()
 {
     Suite *s;
-    TCase *test_case_dynarray_construct_destruct, *test_case_dynarray_size, *test_case_dynarray_reserve,
-          *test_case_dynarray_shrinkToFit, *test_case_dynarray_clear, *test_case_dynarray_insert,
-          *test_case_dynarray_insertArray, *test_case_dynarray_insertDynArray, *test_case_dynarray_add,
-          *test_case_dynarray_addArray, *test_case_dynarray_addDynArray, *test_case_dynarray_set,
-          *test_case_dynarray_remove;
+    TCase *test_case_aDynArrayConstruct_aDynArrayDestruct, *test_case_aDynArraySize, *test_case_aDynArrayReserve,
+          *test_case_aDynArrayShrinkToFit, *test_case_aDynArrayClear, *test_case_aDynArrayInsert,
+          *test_case_aDynArrayInsertArray, *test_case_aDynArrayInsertDynArray, *test_case_aDynArrayAdd,
+          *test_case_aDynArrayAddArray, *test_case_aDynArrayAddDynArray, *test_case_aDynArraySet,
+          *test_case_aDynArrayRemove;
 
     s = suite_create("Dynamic Array Test Suite");
 
-    test_case_dynarray_construct_destruct = tcase_create("Dynamic Array Test Case: construct/destruct");
-    tcase_add_test(test_case_dynarray_construct_destruct, test_dynarray_construct_destruct_valid);
-    tcase_add_test(test_case_dynarray_construct_destruct, test_dynarray_construct_noMemoryAvailable);
-    tcase_add_test(test_case_dynarray_construct_destruct, test_dynarray_destruct_nullptr);
-    suite_add_tcase(s, test_case_dynarray_construct_destruct);
+    test_case_aDynArrayConstruct_aDynArrayDestruct = tcase_create("Dynamic Array Test Case: aDynArrayConstruct / aDynArrayDestruct");
+    tcase_add_test(test_case_aDynArrayConstruct_aDynArrayDestruct, test_aDynArrayConstruct_aDynArrayDestruct_valid);
+    tcase_add_test(test_case_aDynArrayConstruct_aDynArrayDestruct, test_aDynArrayConstruct_aDynArrayDestruct_noMemoryAvailable);
+    tcase_add_test(test_case_aDynArrayConstruct_aDynArrayDestruct, test_aDynArrayConstruct_aDynArrayDestruct_nullptr);
+    suite_add_tcase(s, test_case_aDynArrayConstruct_aDynArrayDestruct);
 
-    test_case_dynarray_size = tcase_create("Dynamic Array Test Case: size");
-    tcase_add_test(test_case_dynarray_size, test_dynarray_size_valid);
-    tcase_add_test(test_case_dynarray_size, test_dynarray_size_nullptr);
-    suite_add_tcase(s, test_case_dynarray_size);
+    test_case_aDynArraySize = tcase_create("Dynamic Array Test Case: aDynArraySize");
+    tcase_add_test(test_case_aDynArraySize, test_aDynArraySize_valid);
+    tcase_add_test(test_case_aDynArraySize, test_aDynArraySize_nullptr);
+    suite_add_tcase(s, test_case_aDynArraySize);
 
-    test_case_dynarray_reserve = tcase_create("Dynamic Array Test Case: reserve");
-    tcase_add_test(test_case_dynarray_reserve, test_dynarray_reserve_success_enoughCapacityBufferNotNull);
-    tcase_add_test(test_case_dynarray_reserve, test_dynarray_reserve_success_enoughCapacityBufferNull);
-    tcase_add_test(test_case_dynarray_reserve, test_dynarray_reserve_success_notEnoughCapacity);
-    tcase_add_test(test_case_dynarray_reserve, test_dynarray_reserve_failure_biggerThanMaxCapacity);
-    tcase_add_test(test_case_dynarray_reserve, test_dynarray_reserve_failure_noMemoryAvailable);
-    tcase_add_test(test_case_dynarray_reserve, test_dynarray_reserve_failure_calculateCapacityNull);
-    tcase_add_test(test_case_dynarray_reserve, test_dynarray_reserve_failure_nullptr);
-    suite_add_tcase(s, test_case_dynarray_reserve);
+    test_case_aDynArrayReserve = tcase_create("Dynamic Array Test Case: aDynArrayReserve");
+    tcase_add_test(test_case_aDynArrayReserve, test_aDynArrayReserve_success_enoughCapacityBufferNotNull);
+    tcase_add_test(test_case_aDynArrayReserve, test_aDynArrayReserve_success_enoughCapacityBufferNull);
+    tcase_add_test(test_case_aDynArrayReserve, test_aDynArrayReserve_success_notEnoughCapacity);
+    tcase_add_test(test_case_aDynArrayReserve, test_aDynArrayReserve_failure_biggerThanMaxCapacity);
+    tcase_add_test(test_case_aDynArrayReserve, test_aDynArrayReserve_failure_noMemoryAvailable);
+    tcase_add_test(test_case_aDynArrayReserve, test_aDynArrayReserve_failure_calculateCapacityNull);
+    tcase_add_test(test_case_aDynArrayReserve, test_aDynArrayReserve_failure_nullptr);
+    suite_add_tcase(s, test_case_aDynArrayReserve);
 
-    test_case_dynarray_shrinkToFit = tcase_create("Dynamic Array Test Case: shrinkToFit");
-    tcase_add_test(test_case_dynarray_shrinkToFit, test_dynarray_shrinkToFit_success_hasLeastCapacityBufferNotNull);
-    tcase_add_test(test_case_dynarray_shrinkToFit, test_dynarray_shrinkToFit_success_hasLeastCapacityBufferNull);
-    tcase_add_test(test_case_dynarray_shrinkToFit, test_dynarray_shrinkToFit_success_hasNotLeastCapacity);
-    tcase_add_test(test_case_dynarray_shrinkToFit, test_dynarray_shrinkToFit_failure_noMemoryAvailable);
-    tcase_add_test(test_case_dynarray_shrinkToFit, test_dynarray_shrinkToFit_failure_calculateCapacityNull);
-    tcase_add_test(test_case_dynarray_shrinkToFit, test_dynarray_shrinkToFit_failure_nullptr);
-    suite_add_tcase(s, test_case_dynarray_shrinkToFit);
+    test_case_aDynArrayShrinkToFit = tcase_create("Dynamic Array Test Case: aDynArrayShrinkToFit");
+    tcase_add_test(test_case_aDynArrayShrinkToFit, test_aDynArrayShrinkToFit_success_hasLeastCapacityBufferNotNull);
+    tcase_add_test(test_case_aDynArrayShrinkToFit, test_aDynArrayShrinkToFit_success_hasLeastCapacityBufferNull);
+    tcase_add_test(test_case_aDynArrayShrinkToFit, test_aDynArrayShrinkToFit_success_hasNotLeastCapacity);
+    tcase_add_test(test_case_aDynArrayShrinkToFit, test_aDynArrayShrinkToFit_failure_noMemoryAvailable);
+    tcase_add_test(test_case_aDynArrayShrinkToFit, test_aDynArrayShrinkToFit_failure_calculateCapacityNull);
+    tcase_add_test(test_case_aDynArrayShrinkToFit, test_aDynArrayShrinkToFit_failure_nullptr);
+    suite_add_tcase(s, test_case_aDynArrayShrinkToFit);
 
-    test_case_dynarray_clear = tcase_create("Dynamic Array Test Case: clear");
-    tcase_add_test(test_case_dynarray_clear, test_dynarray_clear_success_shrinked);
-    tcase_add_test(test_case_dynarray_clear, test_dynarray_clear_failure_notShrinked);
-    tcase_add_test(test_case_dynarray_clear, test_dynarray_clear_failure_nullptr);
-    suite_add_tcase(s, test_case_dynarray_clear);
+    test_case_aDynArrayClear = tcase_create("Dynamic Array Test Case: aDynArrayClear");
+    tcase_add_test(test_case_aDynArrayClear, test_aDynArrayClear_success_shrinked);
+    tcase_add_test(test_case_aDynArrayClear, test_aDynArrayClear_failure_notShrinked);
+    tcase_add_test(test_case_aDynArrayClear, test_aDynArrayClear_failure_nullptr);
+    suite_add_tcase(s, test_case_aDynArrayClear);
 
-    test_case_dynarray_insert = tcase_create("Dynamic Array Test Case: insert");
-    tcase_add_test(test_case_dynarray_insert, test_dynarray_insert_success_zeroIndex);
-    tcase_add_test(test_case_dynarray_insert, test_dynarray_insert_success_middleIndex);
-    tcase_add_test(test_case_dynarray_insert, test_dynarray_insert_success_endIndex);
-    tcase_add_test(test_case_dynarray_insert, test_dynarray_insert_success_beyondEndIndex);
-    tcase_add_test(test_case_dynarray_insert, test_dynarray_insert_success_bufferExpanded);
-    tcase_add_test(test_case_dynarray_insert, test_dynarray_insert_failure_negativeIndex);
-    tcase_add_test(test_case_dynarray_insert, test_dynarray_insert_failure_bufferExpansionFailed);
-    tcase_add_test(test_case_dynarray_insert, test_dynarray_insert_failure_nullptr);
-    suite_add_tcase(s, test_case_dynarray_insert);
+    test_case_aDynArrayInsert = tcase_create("Dynamic Array Test Case: aDynArrayInsert");
+    tcase_add_test(test_case_aDynArrayInsert, test_aDynArrayInsert_success_zeroIndex);
+    tcase_add_test(test_case_aDynArrayInsert, test_aDynArrayInsert_success_middleIndex);
+    tcase_add_test(test_case_aDynArrayInsert, test_aDynArrayInsert_success_endIndex);
+    tcase_add_test(test_case_aDynArrayInsert, test_aDynArrayInsert_success_beyondEndIndex);
+    tcase_add_test(test_case_aDynArrayInsert, test_aDynArrayInsert_success_bufferExpanded);
+    tcase_add_test(test_case_aDynArrayInsert, test_aDynArrayInsert_failure_negativeIndex);
+    tcase_add_test(test_case_aDynArrayInsert, test_aDynArrayInsert_failure_bufferExpansionFailed);
+    tcase_add_test(test_case_aDynArrayInsert, test_aDynArrayInsert_failure_nullptr);
+    suite_add_tcase(s, test_case_aDynArrayInsert);
 
-    test_case_dynarray_insertArray = tcase_create("Dynamic Array Test Case: insertArray");
-    tcase_add_test(test_case_dynarray_insertArray, test_dynarray_insertArray_success_zeroIndex);
-    tcase_add_test(test_case_dynarray_insertArray, test_dynarray_insertArray_success_middleIndex);
-    tcase_add_test(test_case_dynarray_insertArray, test_dynarray_insertArray_success_endIndex);
-    tcase_add_test(test_case_dynarray_insertArray, test_dynarray_insertArray_success_beyondEndIndex);
-    tcase_add_test(test_case_dynarray_insertArray, test_dynarray_insertArray_success_bufferExpanded);
-    tcase_add_test(test_case_dynarray_insertArray, test_dynarray_insertArray_success_nullptrArray);
-    tcase_add_test(test_case_dynarray_insertArray, test_dynarray_insertArray_success_zeroArraySize);
-    tcase_add_test(test_case_dynarray_insertArray, test_dynarray_insertArray_failure_negativeIndex);
-    tcase_add_test(test_case_dynarray_insertArray, test_dynarray_insertArray_failure_bufferExpansionFailed);
-    tcase_add_test(test_case_dynarray_insertArray, test_dynarray_insertArray_failure_nullptrDestArray);
-    suite_add_tcase(s, test_case_dynarray_insertArray);
+    test_case_aDynArrayInsertArray = tcase_create("Dynamic Array Test Case: aDynArrayInsertArray");
+    tcase_add_test(test_case_aDynArrayInsertArray, test_aDynArrayInsertArray_success_zeroIndex);
+    tcase_add_test(test_case_aDynArrayInsertArray, test_aDynArrayInsertArray_success_middleIndex);
+    tcase_add_test(test_case_aDynArrayInsertArray, test_aDynArrayInsertArray_success_endIndex);
+    tcase_add_test(test_case_aDynArrayInsertArray, test_aDynArrayInsertArray_success_beyondEndIndex);
+    tcase_add_test(test_case_aDynArrayInsertArray, test_aDynArrayInsertArray_success_bufferExpanded);
+    tcase_add_test(test_case_aDynArrayInsertArray, test_aDynArrayInsertArray_success_nullptrArray);
+    tcase_add_test(test_case_aDynArrayInsertArray, test_aDynArrayInsertArray_success_zeroArraySize);
+    tcase_add_test(test_case_aDynArrayInsertArray, test_aDynArrayInsertArray_failure_negativeIndex);
+    tcase_add_test(test_case_aDynArrayInsertArray, test_aDynArrayInsertArray_failure_bufferExpansionFailed);
+    tcase_add_test(test_case_aDynArrayInsertArray, test_aDynArrayInsertArray_failure_nullptrDestArray);
+    suite_add_tcase(s, test_case_aDynArrayInsertArray);
 
-    test_case_dynarray_insertDynArray = tcase_create("Dynamic Array Test Case: insertDynArray");
-    tcase_add_test(test_case_dynarray_insertDynArray, test_dynarray_insertDynArray_success_zeroIndex);
-    tcase_add_test(test_case_dynarray_insertDynArray, test_dynarray_insertDynArray_success_middleIndex);
-    tcase_add_test(test_case_dynarray_insertDynArray, test_dynarray_insertDynArray_success_endIndex);
-    tcase_add_test(test_case_dynarray_insertDynArray, test_dynarray_insertDynArray_success_beyondEndIndex);
-    tcase_add_test(test_case_dynarray_insertDynArray, test_dynarray_insertDynArray_success_bufferExpanded);
-    tcase_add_test(test_case_dynarray_insertDynArray, test_dynarray_insertDynArray_success_nullptrSrcArray);
-    tcase_add_test(test_case_dynarray_insertDynArray, test_dynarray_insertDynArray_success_zeroSizeSrcArray);
-    tcase_add_test(test_case_dynarray_insertDynArray, test_dynarray_insertDynArray_failure_negativeIndex);
-    tcase_add_test(test_case_dynarray_insertDynArray, test_dynarray_insertDynArray_failure_bufferExpansionFailed);
-    tcase_add_test(test_case_dynarray_insertDynArray, test_dynarray_insertDynArray_failure_nullptrDestArray);
-    suite_add_tcase(s, test_case_dynarray_insertDynArray);
+    test_case_aDynArrayInsertDynArray = tcase_create("Dynamic Array Test Case: aDynArrayInsertDynArray");
+    tcase_add_test(test_case_aDynArrayInsertDynArray, test_aDynArrayInsertDynArray_success_zeroIndex);
+    tcase_add_test(test_case_aDynArrayInsertDynArray, test_aDynArrayInsertDynArray_success_middleIndex);
+    tcase_add_test(test_case_aDynArrayInsertDynArray, test_aDynArrayInsertDynArray_success_endIndex);
+    tcase_add_test(test_case_aDynArrayInsertDynArray, test_aDynArrayInsertDynArray_success_beyondEndIndex);
+    tcase_add_test(test_case_aDynArrayInsertDynArray, test_aDynArrayInsertDynArray_success_bufferExpanded);
+    tcase_add_test(test_case_aDynArrayInsertDynArray, test_aDynArrayInsertDynArray_success_nullptrSrcArray);
+    tcase_add_test(test_case_aDynArrayInsertDynArray, test_aDynArrayInsertDynArray_success_zeroSizeSrcArray);
+    tcase_add_test(test_case_aDynArrayInsertDynArray, test_aDynArrayInsertDynArray_failure_negativeIndex);
+    tcase_add_test(test_case_aDynArrayInsertDynArray, test_aDynArrayInsertDynArray_failure_bufferExpansionFailed);
+    tcase_add_test(test_case_aDynArrayInsertDynArray, test_aDynArrayInsertDynArray_failure_nullptrDestArray);
+    suite_add_tcase(s, test_case_aDynArrayInsertDynArray);
 
-    test_case_dynarray_add = tcase_create("Dynamic Array Test Case: add");
-    tcase_add_test(test_case_dynarray_add, test_dynarray_add_success_enoughCapacity);
-    tcase_add_test(test_case_dynarray_add, test_dynarray_add_success_notEnoughCapacity);
-    tcase_add_test(test_case_dynarray_add, test_dynarray_add_failure_bufferExpansionFailed);
-    tcase_add_test(test_case_dynarray_add, test_dynarray_add_failure_nullptr);
-    suite_add_tcase(s, test_case_dynarray_add);
+    test_case_aDynArrayAdd = tcase_create("Dynamic Array Test Case: aDynArrayAdd");
+    tcase_add_test(test_case_aDynArrayAdd, test_aDynArrayAdd_success_enoughCapacity);
+    tcase_add_test(test_case_aDynArrayAdd, test_aDynArrayAdd_success_notEnoughCapacity);
+    tcase_add_test(test_case_aDynArrayAdd, test_aDynArrayAdd_failure_bufferExpansionFailed);
+    tcase_add_test(test_case_aDynArrayAdd, test_aDynArrayAdd_failure_nullptr);
+    suite_add_tcase(s, test_case_aDynArrayAdd);
 
-    test_case_dynarray_addArray = tcase_create("Dynamic Array Test Case: addArray");
-    tcase_add_test(test_case_dynarray_addArray, test_dynarray_addArray_success_enoughCapacity);
-    tcase_add_test(test_case_dynarray_addArray, test_dynarray_addArray_success_notEnoughCapacity);
-    tcase_add_test(test_case_dynarray_addArray, test_dynarray_addArray_success_nullptrArray);
-    tcase_add_test(test_case_dynarray_addArray, test_dynarray_addArray_success_zeroArraySize);
-    tcase_add_test(test_case_dynarray_addArray, test_dynarray_addArray_failure_bufferExpansionFailed);
-    tcase_add_test(test_case_dynarray_addArray, test_dynarray_addArray_failure_nullptrDestArray);
-    suite_add_tcase(s, test_case_dynarray_addArray);
+    test_case_aDynArrayAddArray = tcase_create("Dynamic Array Test Case: aDynArrayAddArray");
+    tcase_add_test(test_case_aDynArrayAddArray, test_aDynArrayAddArray_success_enoughCapacity);
+    tcase_add_test(test_case_aDynArrayAddArray, test_aDynArrayAddArray_success_notEnoughCapacity);
+    tcase_add_test(test_case_aDynArrayAddArray, test_aDynArrayAddArray_success_nullptrArray);
+    tcase_add_test(test_case_aDynArrayAddArray, test_aDynArrayAddArray_success_zeroArraySize);
+    tcase_add_test(test_case_aDynArrayAddArray, test_aDynArrayAddArray_failure_bufferExpansionFailed);
+    tcase_add_test(test_case_aDynArrayAddArray, test_aDynArrayAddArray_failure_nullptrDestArray);
+    suite_add_tcase(s, test_case_aDynArrayAddArray);
 
-    test_case_dynarray_addDynArray = tcase_create("Dynamic Array Test Case: addDynArray");
-    tcase_add_test(test_case_dynarray_addDynArray, test_dynarray_addDynArray_success_enoughCapacity);
-    tcase_add_test(test_case_dynarray_addDynArray, test_dynarray_addDynArray_success_notEnoughCapacity);
-    tcase_add_test(test_case_dynarray_addDynArray, test_dynarray_addDynArray_success_nullptrSrcArray);
-    tcase_add_test(test_case_dynarray_addDynArray, test_dynarray_addDynArray_success_zeroSizeSrcArray);
-    tcase_add_test(test_case_dynarray_addDynArray, test_dynarray_addDynArray_failure_bufferExpansionFailed);
-    tcase_add_test(test_case_dynarray_addDynArray, test_dynarray_addDynArray_failure_nullptrDestArray);
-    suite_add_tcase(s, test_case_dynarray_addDynArray);
+    test_case_aDynArrayAddDynArray = tcase_create("Dynamic Array Test Case: aDynArrayAddDynArray");
+    tcase_add_test(test_case_aDynArrayAddDynArray, test_aDynArrayAddDynArray_success_enoughCapacity);
+    tcase_add_test(test_case_aDynArrayAddDynArray, test_aDynArrayAddDynArray_success_notEnoughCapacity);
+    tcase_add_test(test_case_aDynArrayAddDynArray, test_aDynArrayAddDynArray_success_nullptrSrcArray);
+    tcase_add_test(test_case_aDynArrayAddDynArray, test_aDynArrayAddDynArray_success_zeroSizeSrcArray);
+    tcase_add_test(test_case_aDynArrayAddDynArray, test_aDynArrayAddDynArray_failure_bufferExpansionFailed);
+    tcase_add_test(test_case_aDynArrayAddDynArray, test_aDynArrayAddDynArray_failure_nullptrDestArray);
+    suite_add_tcase(s, test_case_aDynArrayAddDynArray);
 
-    test_case_dynarray_set = tcase_create("Dynamic Array Test Case: set");
-    tcase_add_test(test_case_dynarray_set, test_dynarray_set_success_indexInBounds);
-    tcase_add_test(test_case_dynarray_set, test_dynarray_set_success_indexBeyondSize);
-    tcase_add_test(test_case_dynarray_set, test_dynarray_set_success_indexBeyondSize_bufferExpanded);
-    tcase_add_test(test_case_dynarray_set, test_dynarray_set_failure_indexBeyondSize_bufferExpansionFailed);
-    tcase_add_test(test_case_dynarray_set, test_dynarray_set_failure_nullptr);
-    suite_add_tcase(s, test_case_dynarray_set);
+    test_case_aDynArraySet = tcase_create("Dynamic Array Test Case: aDynArraySet");
+    tcase_add_test(test_case_aDynArraySet, test_aDynArraySet_success_indexInBounds);
+    tcase_add_test(test_case_aDynArraySet, test_aDynArraySet_success_indexBeyondSize);
+    tcase_add_test(test_case_aDynArraySet, test_aDynArraySet_success_indexBeyondSize_bufferExpanded);
+    tcase_add_test(test_case_aDynArraySet, test_aDynArraySet_failure_indexBeyondSize_bufferExpansionFailed);
+    tcase_add_test(test_case_aDynArraySet, test_aDynArraySet_failure_nullptr);
+    suite_add_tcase(s, test_case_aDynArraySet);
 
-    test_case_dynarray_remove = tcase_create("Dynamic Array Test Case: remove");
-    tcase_add_test(test_case_dynarray_remove, test_dynarray_remove_indexRangeInBounds);
-    tcase_add_test(test_case_dynarray_remove, test_dynarray_remove_rangeBeyondBounds);
-    tcase_add_test(test_case_dynarray_remove, test_dynarray_remove_zeroRange);
-    tcase_add_test(test_case_dynarray_remove, test_dynarray_remove_indexBeyoundBounds);
-    tcase_add_test(test_case_dynarray_remove, test_dynarray_remove_nullptr);
-    suite_add_tcase(s, test_case_dynarray_remove);
+    test_case_aDynArrayRemove = tcase_create("Dynamic Array Test Case: aDynArrayRemove");
+    tcase_add_test(test_case_aDynArrayRemove, test_aDynArrayRemove_indexRangeInBounds);
+    tcase_add_test(test_case_aDynArrayRemove, test_aDynArrayRemove_rangeBeyondBounds);
+    tcase_add_test(test_case_aDynArrayRemove, test_aDynArrayRemove_zeroRange);
+    tcase_add_test(test_case_aDynArrayRemove, test_aDynArrayRemove_indexBeyoundBounds);
+    tcase_add_test(test_case_aDynArrayRemove, test_aDynArrayRemove_nullptr);
+    suite_add_tcase(s, test_case_aDynArrayRemove);
 
     return s;
 }
@@ -1708,8 +1696,7 @@ int main(void)
     s = test_suite_dynarray();
     sr = srunner_create(s);
 
-    if(CHECK_DONT_FORK_DYNARRAY_TEST)
-        srunner_set_fork_status(sr, CK_NOFORK);
+    srunner_set_fork_status(sr, CK_NOFORK);
     srunner_run_all(sr, CK_NORMAL);
     number_failed = srunner_ntests_failed(sr);
     srunner_free(sr);
