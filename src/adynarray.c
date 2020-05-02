@@ -1,14 +1,14 @@
-#if !ACUTILS_ONE_SOURCE
-#   include "../include/ACUtils/dynarray.h"
+#ifndef ACUTILS_ONE_SOURCE
+#   include "../include/ACUtils/adynarray.h"
 #endif
+
+#ifdef ACUTILS_ADYNARRAY_H /* if compiled as one source and not included from header, the definitions are excluded */
 
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
 
-#ifdef PRIVATE_ACUTILS_DYN_ARRAY_IMPLEMENT
-
-ACUTILS_SYMBOL_ATTRIBUTES PRIVATE_ACUTILS_ST_FUNC size_t private_ACUtils_DynArray_calculateCapacityGeneric(size_t requiredSize, size_t minCapacity, size_t maxCapacity, double multiplier) {
+ACUTILS_ST_FUNC size_t private_ACUtils_ADynArray_calculateCapacityGeneric(size_t requiredSize, size_t minCapacity, size_t maxCapacity, double multiplier) {
     double multiplierExponent;
     size_t capacity;
     if(requiredSize <= minCapacity)
@@ -20,18 +20,18 @@ ACUTILS_SYMBOL_ATTRIBUTES PRIVATE_ACUTILS_ST_FUNC size_t private_ACUtils_DynArra
     return capacity;
 }
 static size_t private_ACUtils_DynArray_calculateCapacityDefault(size_t requiredSize) {
-    return private_ACUtils_DynArray_calculateCapacityGeneric(requiredSize, 8, 8388608, 2); /* maxCapacity = minCapacity * pow(multiplier, 20) */
+    return private_ACUtils_ADynArray_calculateCapacityGeneric(requiredSize, 8, 8388608, 2); /* maxCapacity = minCapacity * pow(multiplier, 20) */
 }
 
 
 A_DYNAMIC_ARRAY_DEFINITION(private_ACUtils_DynArray_Prototype, char);
 
-ACUTILS_SYMBOL_ATTRIBUTES PRIVATE_ACUTILS_ST_FUNC void* private_ACUtils_DynArray_construct(size_t typeSize)
+ACUTILS_ST_FUNC void* private_ACUtils_ADynArray_construct(size_t typeSize)
 {
-    return private_ACUtils_DynArray_constructWithAllocator(typeSize, realloc, free);
+    return private_ACUtils_ADynArray_constructWithAllocator(typeSize, realloc, free);
 }
-ACUTILS_SYMBOL_ATTRIBUTES PRIVATE_ACUTILS_ST_FUNC void* private_ACUtils_DynArray_constructWithAllocator(size_t typeSize,
-        const aDynArrayReallocator reallocator, const aDynArrayDeallocator deallocator)
+ACUTILS_ST_FUNC void* private_ACUtils_ADynArray_constructWithAllocator(size_t typeSize, ACUtilsReallocator reallocator,
+                                                                       ACUtilsDeallocator deallocator)
 {
     struct private_ACUtils_DynArray_Prototype* prototype;
     if(reallocator == NULL || deallocator == NULL)
@@ -45,14 +45,14 @@ ACUTILS_SYMBOL_ATTRIBUTES PRIVATE_ACUTILS_ST_FUNC void* private_ACUtils_DynArray
         prototype->capacity = prototype->calculateCapacity(prototype->size);
         prototype->buffer = (char*) prototype->reallocator(NULL, prototype->capacity * typeSize);
         if(prototype->buffer == NULL) {
-            private_ACUtils_DynArray_destruct(prototype);
+            private_ACUtils_ADynArray_destruct(prototype);
             return NULL;
         }
     }
     return prototype;
 }
 
-ACUTILS_SYMBOL_ATTRIBUTES PRIVATE_ACUTILS_ST_FUNC void private_ACUtils_DynArray_destruct(void *dynArray)
+ACUTILS_ST_FUNC void private_ACUtils_ADynArray_destruct(void *dynArray)
 {
     if(dynArray != NULL) {
         struct private_ACUtils_DynArray_Prototype* prototype = (struct private_ACUtils_DynArray_Prototype*) dynArray;
@@ -61,12 +61,12 @@ ACUTILS_SYMBOL_ATTRIBUTES PRIVATE_ACUTILS_ST_FUNC void private_ACUtils_DynArray_
     }
 }
 
-ACUTILS_SYMBOL_ATTRIBUTES PRIVATE_ACUTILS_ST_FUNC size_t private_ACUtils_DynArray_size(void *dynArray)
+ACUTILS_ST_FUNC size_t private_ACUtils_ADynArray_size(void *dynArray)
 {
     return (dynArray == NULL) ? 0 : ((struct private_ACUtils_DynArray_Prototype*) dynArray)->size;
 }
 
-ACUTILS_SYMBOL_ATTRIBUTES PRIVATE_ACUTILS_ST_FUNC bool private_ACUtils_DynArray_reserve(void *dynArray, size_t reserveSize, size_t typeSize)
+ACUTILS_ST_FUNC bool private_ACUtils_ADynArray_reserve(void *dynArray, size_t reserveSize, size_t typeSize)
 {
     if(dynArray != NULL) {
         struct private_ACUtils_DynArray_Prototype* prototype = (struct private_ACUtils_DynArray_Prototype*) dynArray;
@@ -89,7 +89,7 @@ ACUTILS_SYMBOL_ATTRIBUTES PRIVATE_ACUTILS_ST_FUNC bool private_ACUtils_DynArray_
     return false;
 }
 
-ACUTILS_SYMBOL_ATTRIBUTES PRIVATE_ACUTILS_ST_FUNC bool private_ACUtils_DynArray_shrinkToFit(void *dynArray, size_t typeSize)
+ACUTILS_ST_FUNC bool private_ACUtils_ADynArray_shrinkToFit(void *dynArray, size_t typeSize)
 {
     if(dynArray != NULL) {
         struct private_ACUtils_DynArray_Prototype* prototype = (struct private_ACUtils_DynArray_Prototype*) dynArray;
@@ -97,7 +97,7 @@ ACUTILS_SYMBOL_ATTRIBUTES PRIVATE_ACUTILS_ST_FUNC bool private_ACUtils_DynArray_
             if(prototype->capacity > prototype->calculateCapacity(prototype->size)) {
                 size_t capacityBackup = prototype->capacity;
                 prototype->capacity = (prototype->size == 0) ? 0 : prototype->size - 1;
-                if(!private_ACUtils_DynArray_reserve(dynArray, prototype->capacity + 1, typeSize)) {
+                if(!private_ACUtils_ADynArray_reserve(dynArray, prototype->capacity + 1, typeSize)) {
                     prototype->capacity = capacityBackup;
                 } else {
                     return true;
@@ -110,33 +110,33 @@ ACUTILS_SYMBOL_ATTRIBUTES PRIVATE_ACUTILS_ST_FUNC bool private_ACUtils_DynArray_
     return false;
 }
 
-ACUTILS_SYMBOL_ATTRIBUTES PRIVATE_ACUTILS_ST_FUNC bool private_ACUtils_DynArray_clear(void *dynArray, size_t typeSize)
+ACUTILS_ST_FUNC bool private_ACUtils_ADynArray_clear(void *dynArray, size_t typeSize)
 {
     if(dynArray != NULL) {
         ((struct private_ACUtils_DynArray_Prototype*) dynArray)->size = 0;
-        return private_ACUtils_DynArray_shrinkToFit(dynArray, typeSize);
+        return private_ACUtils_ADynArray_shrinkToFit(dynArray, typeSize);
     }
     return false;
 }
 
 static bool private_ACUtils_DynArray_shiftElements(void *dynArray, size_t index, size_t count, size_t typeSize)
 {
-    size_t dynArraySize = private_ACUtils_DynArray_size(dynArray);
+    size_t dynArraySize = private_ACUtils_ADynArray_size(dynArray);
     if(index >= dynArraySize) {
         return true;
-    } else if(private_ACUtils_DynArray_reserve(dynArray, dynArraySize + count, typeSize)) {
+    } else if(private_ACUtils_ADynArray_reserve(dynArray, dynArraySize + count, typeSize)) {
         char *buffer = ((struct private_ACUtils_DynArray_Prototype*) dynArray)->buffer + (index * typeSize);
         memmove(buffer + (count * typeSize), buffer, (dynArraySize - index) * typeSize);
         return true;
     }
     return false;
 }
-ACUTILS_SYMBOL_ATTRIBUTES PRIVATE_ACUTILS_ST_FUNC bool private_ACUtils_DynArray_prepareInsertion(void* dynArray, size_t index, size_t valueCount, size_t typeSize)
+ACUTILS_ST_FUNC bool private_ACUtils_ADynArray_prepareInsertion(void* dynArray, size_t index, size_t valueCount, size_t typeSize)
 {
     if(dynArray != NULL && valueCount > 0) {
         struct private_ACUtils_DynArray_Prototype* prototype = (struct private_ACUtils_DynArray_Prototype*) dynArray;
         if(index >= prototype->size) {
-            if(!private_ACUtils_DynArray_reserve(dynArray, prototype->size + valueCount, typeSize))
+            if(!private_ACUtils_ADynArray_reserve(dynArray, prototype->size + valueCount, typeSize))
                 return false;
         } else if(!private_ACUtils_DynArray_shiftElements(dynArray, index, valueCount, typeSize)) {
             return false;
@@ -146,11 +146,11 @@ ACUTILS_SYMBOL_ATTRIBUTES PRIVATE_ACUTILS_ST_FUNC bool private_ACUtils_DynArray_
     }
     return valueCount == 0;
 }
-ACUTILS_SYMBOL_ATTRIBUTES PRIVATE_ACUTILS_ST_FUNC bool private_ACUtils_DynArray_insertArray(void *dynArray, size_t index, const void *array, size_t arraySize, size_t typeSize)
+ACUTILS_ST_FUNC bool private_ACUtils_ADynArray_insertArray(void *dynArray, size_t index, const void *array, size_t arraySize, size_t typeSize)
 {
     if(array == NULL)
         arraySize = 0;
-    if(private_ACUtils_DynArray_prepareInsertion(dynArray, index, arraySize, typeSize)) {
+    if(private_ACUtils_ADynArray_prepareInsertion(dynArray, index, arraySize, typeSize)) {
         struct private_ACUtils_DynArray_Prototype* prototype = (struct private_ACUtils_DynArray_Prototype*) dynArray;
         memcpy(prototype->buffer + ((index >= prototype->size ? prototype->size - arraySize : index) * typeSize), array, arraySize * typeSize);
         return true;
@@ -158,7 +158,7 @@ ACUTILS_SYMBOL_ATTRIBUTES PRIVATE_ACUTILS_ST_FUNC bool private_ACUtils_DynArray_
     return false;
 }
 
-ACUTILS_SYMBOL_ATTRIBUTES PRIVATE_ACUTILS_ST_FUNC void private_ACUtils_DynArray_remove(void *dynArray, size_t index, size_t count, size_t typeSize)
+ACUTILS_ST_FUNC void private_ACUtils_ADynArray_remove(void *dynArray, size_t index, size_t count, size_t typeSize)
 {
     struct private_ACUtils_DynArray_Prototype* prototype = (struct private_ACUtils_DynArray_Prototype*) dynArray;
     if(dynArray != NULL && count > 0 && index >= 0 && index < prototype->size) {
@@ -171,4 +171,4 @@ ACUTILS_SYMBOL_ATTRIBUTES PRIVATE_ACUTILS_ST_FUNC void private_ACUtils_DynArray_
     }
 }
 
-#endif /* PRIVATE_ACUTILS_DYN_ARRAY_IMPLEMENT */
+#endif /* ACUTILS_ADYNARRAY_H */
