@@ -1,8 +1,6 @@
 #ifndef ACUTILS_ADYNARRAY_H
 #define ACUTILS_ADYNARRAY_H
 
-#include <stddef.h>
-
 #include "macros.h"
 #include "types.h"
 
@@ -14,7 +12,7 @@
     { \
         const ACUtilsReallocator reallocator; \
         const ACUtilsDeallocator deallocator; \
-        size_t(*calculateCapacity)(size_t); \
+        ACUtilsGrowStrategy growStrategy; \
         size_t size; \
         size_t capacity; \
         type* buffer; \
@@ -52,11 +50,49 @@
     private_ACUtils_ADynArray_destruct(dynArray)
 
 /**
+ * @param dynArray The dynamic array to get the reallocator from.
+ * @return The reallocator of dynArray.
+ */
+#define ADynArray_reallocator(dynArray) \
+    (((dynArray) == NULL) ? NULL : (dynArray)->reallocator)
+/**
+ * @param dynArray The dynamic array to get the deallocatr from.
+ * @return The deallocator of dynArray.
+ */
+#define ADynArray_deallocator(dynArray) \
+    (((dynArray) == NULL) ? NULL : (dynArray)->deallocator)
+/**
+ * @param dynArray The dynamic array to get the grow strategy from.
+ * @return The grow strategy of dynArray.
+ */
+#define ADynArray_getGrowStrategy(dynArray) \
+    (((dynArray) == NULL) ? NULL : (dynArray)->growStrategy)
+/**
+ * @param dynArray The dynamic array to set the grow strategy for.
+ * @param growStrategy The new grow strategy function for dynArray.
+ */
+#define ADynArray_setGrowStrategy(dynArray, growStrategy) \
+    (private_ACUtils_ADynArray_setGrowStrategy(dynArray, growStrategy))
+
+/**
+ * @param dynArray The dynamic array to get the buffer from.
+ * @return The buffer of dynArray.
+ */
+#define ADynArray_buffer(dynArray) \
+    (((dynArray) == NULL) ? NULL : (dynArray)->buffer)
+
+/**
  * @param dynArray The dynamic array to get the size from.
  * @return The size (number of elements) of the passed dynamic array.
  */
 #define ADynArray_size(dynArray) \
     private_ACUtils_ADynArray_size(dynArray)
+/**
+ * @param dynArray The dynamic array to get the capacity from.
+ * @return The capacity of dynArray (The maximum number of elements the Buffer can hold until it needs to be resized).
+ */
+#define ADynArray_capacity(dynArray) \
+    private_ACUtils_ADynArray_capacity(dynArray)
 
 /**
  * Resize dynArray, that it can hold at least reserveSize count items without resizing.
@@ -70,7 +106,6 @@
  *
  * @param dynArray The dynamic array to resize the buffer if necessary.
  * @param reserveSize The number of items that dynArray should be able to hold without resizing.
- *
  * @return True if dynArray can hold at least reserveSize count elements after this operation, false if not.
  */
 #define ADynArray_reserve(dynArray, reserveSize) \
@@ -81,22 +116,18 @@
  * that the grow strategy returns (for passed size 0).
  *
  * @param dynArray The dynamic array to shrink the capacity to fit its content.
- *
  * @return True if dynArray is small as possible or was successfully resized, false if not.
  */
 #define ADynArray_shrinkToFit(dynArray) \
     private_ACUtils_ADynArray_shrinkToFit(dynArray, sizeof(*(dynArray)->buffer))
 
 /**
- * Clears the content of dynArray and calls dynArrayShrinkToFit(dynArray) after that.
+ * Clears the content of dynArray. The allocated buffer doesn't change.
  *
  * @param dynArray The dynamic array to clear.
- *
- * @return True if dynArray was successfully cleared and shrinked to the minimum possible size, false if only cleared
- * but not shrinked.
  */
 #define ADynArray_clear(dynArray) \
-    private_ACUtils_ADynArray_clear(dynArray, sizeof(*(dynArray)->buffer))
+    private_ACUtils_ADynArray_clear(dynArray)
 
 /**
  * Inserts the value into dynArray at index. If index is bigger or equal to the size of
@@ -106,7 +137,6 @@
  * @param dynArray The dynamic array in which the value should be inserted.
  * @param index The index at which the value should be inserted.
  * @param value The value to insert. This must be an lvalue!
- *
  * @return True if the value was inserted successfully, false if not.
  */
 #define ADynArray_insert(dynArray, index, value) \
@@ -123,7 +153,6 @@
  * @param index The index at which the values should be inserted.
  * @param array A pointer to the array from which the elements should be copied.
  * @param arraySize The count of elements which should be copied from array to dynArray.
- *
  * @return True if the values were added successfully, false if not.
  */
 #define ADynArray_insertArray(dynArray, index, array, arraySize) \
@@ -139,7 +168,6 @@
  * @param destDynArray The dynamic array in which the values should be inserted.
  * @param index The index at which the values should be inserted.
  * @param srcDynArray The dynamic array from which the values should be copied.
- *
  * @return True if the values were inserted successfully, false if not.
  */
 #define ADynArray_insertADynArray(destDynArray, index, srcDynArray) \
@@ -151,7 +179,6 @@
  *
  * @param dynArray The dynamic array to which the value should be added.
  * @param value The value to add. This must be an lvalue!
- *
  * @return True if the value was added successfully, false if not.
  */
 #define ADynArray_append(dynArray, value) \
@@ -164,7 +191,6 @@
  * @param dynArray The dynamic array to which the values should be added.
  * @param array A pointer to the array from which the elements should be copied.
  * @param arraySize The count of elements which should be copied from array to dynArray.
- *
  * @return True if the values were added successfully, false if not.
  */
 #define ADynArray_appendArray(dynArray, array, arraySize) \
@@ -176,7 +202,6 @@
  *
  * @param destDynArray The dynamic array to which the values should be added.
  * @param srcDynArray The dynamic array from which the values should be copied.
- *
  * @return True if the values were added successfully, false if not.
  */
 #define ADynArray_appendADynArray(destDynArray, srcDynArray) \
@@ -189,7 +214,6 @@
  * @param dynArray The dynamic array to set the index of.
  * @param index The index at which the element should be set to value.
  * @param value The value that should be set at index. This must be an lvalue!
- *
  * @return True if the value was set, false if not.
  */
 #define ADynArray_set(dynArray, index, value) \
@@ -215,33 +239,24 @@
  *
  * @param dynArray The dynamic array to get the element from.
  * @param index The index in dynArray to get the element of.
- *
  * @return The element in dynArray at index.
  */
 #define ADynArray_get(dynArray, index) \
     ((dynArray)->buffer[index])
 
-/**
- * Retrieves the buffer of the dynArray.
- *
- * @param dynArray The dynamic array to get the buffer from.
- *
- * @return The buffer of dynArray.
- */
-#define ADynArray_buffer(dynArray) \
-    ((dynArray)->buffer)
-
 #ifdef ACUTILS_ONE_SOURCE
 #   include "../../src/adynarray.c"
 #else
-    size_t private_ACUtils_ADynArray_calculateCapacityGeneric(size_t, size_t, size_t, double, size_t);
+    size_t private_ACUtils_ADynArray_growStrategyGeneric(size_t, size_t, size_t, double, size_t);
     void* private_ACUtils_ADynArray_construct(size_t);
     void* private_ACUtils_ADynArray_constructWithAllocator(size_t, ACUtilsReallocator, ACUtilsDeallocator);
     void private_ACUtils_ADynArray_destruct(void*);
-    size_t private_ACUtils_ADynArray_size(void*);
+    void private_ACUtils_ADynArray_setGrowStrategy(void*, ACUtilsGrowStrategy);
+    size_t private_ACUtils_ADynArray_size(const void*);
+    size_t private_ACUtils_ADynArray_capacity(const void*);
     bool private_ACUtils_ADynArray_reserve(void*, size_t, bool, size_t);
     bool private_ACUtils_ADynArray_shrinkToFit(void*, size_t);
-    bool private_ACUtils_ADynArray_clear(void*, size_t);
+    void private_ACUtils_ADynArray_clear(void*);
     bool private_ACUtils_ADynArray_insertArray(void*, size_t, const void*, size_t, size_t);
     bool private_ACUtils_ADynArray_set(void*, size_t, void*, size_t);
     void private_ACUtils_ADynArray_remove(void*, size_t, size_t, size_t);
