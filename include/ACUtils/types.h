@@ -1,13 +1,12 @@
 #ifndef ACUTILS_TYPES_H
 #define ACUTILS_TYPES_H
 
-#include "stddef.h"
+#include <stddef.h>
+
+#include "macros.h"
 
 #ifndef __cplusplus
-#   ifndef __STDC_VERSION__
-#       define __STDC_VERSION__ 0L
-#   endif
-#   if __STDC_VERSION__ >= 199901L
+#   ifdef ACUTILS_C_STANDARD_99
 #       include <stdbool.h>
 #   else
         typedef enum { false, true } bool;

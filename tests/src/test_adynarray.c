@@ -1616,31 +1616,41 @@ START_TEST(test_aDynArrayMixedWithStruct)
     ck_assert_uint_eq(ADynArray_size(dynArray), 0);
     ck_assert_uint_eq(ADynArray_shrinkToFit(dynArray), true);
     ck_assert_uint_eq(ADynArray_size(dynArray), 0);
-    ck_assert_uint_eq(dynArray->capacity, 8);
+    ck_assert_uint_eq(ADynArray_capacity(dynArray), 8);
     tmpDynArray = ADynArray_constructWithAllocator(struct ADynTestPointArray, private_ACUtilsTest_ADynArray_realloc, private_ACUtilsTest_ADynArray_free);
     ADynArray_appendArray(tmpDynArray, tmpArray + 6, 3);
     ck_assert_uint_eq(ADynArray_size(tmpDynArray), 3);
+    ck_assert_uint_eq(ADynArray_capacity(tmpDynArray), 8);
     ck_assert_uint_eq(ADynArray_insertADynArray(dynArray, 0, tmpDynArray), true);
     ck_assert_uint_eq(ADynArray_size(dynArray), 3);
+    ck_assert_uint_eq(ADynArray_capacity(dynArray), 8);
     ADynArray_destruct(tmpDynArray);
     ck_assert_uint_eq(ADynArray_insert(dynArray, 0, tmpArray[5]), true);
     ck_assert_uint_eq(ADynArray_size(dynArray), 4);
+    ck_assert_uint_eq(ADynArray_capacity(dynArray), 8);
     ck_assert_uint_eq(ADynArray_insert(dynArray, 0, tmpArray[4]), true);
     ck_assert_uint_eq(ADynArray_size(dynArray), 5);
+    ck_assert_uint_eq(ADynArray_capacity(dynArray), 8);
     ck_assert_uint_eq(ADynArray_insert(dynArray, 0, tmpArray[3]), true);
     ck_assert_uint_eq(ADynArray_size(dynArray), 6);
+    ck_assert_uint_eq(ADynArray_capacity(dynArray), 8);
     ck_assert_uint_eq(ADynArray_insertArray(dynArray, 0, tmpArray, 3), true);
     ck_assert_uint_eq(ADynArray_size(dynArray), 9);
+    ck_assert_uint_eq(ADynArray_capacity(dynArray), 16);
     for(i = 0; i < ADynArray_size(dynArray); ++i) {
         ck_assert_double_eq(ADynArray_get(dynArray, i).x, tmpArray[i].x);
         ck_assert_double_eq(ADynArray_get(dynArray, i).y, tmpArray[i].y);
     }
     ADynArray_remove(dynArray, 0, 3);
     ck_assert_uint_eq(ADynArray_size(dynArray), 6);
+    ck_assert_uint_eq(ADynArray_capacity(dynArray), 16);
     for(i = 0; i < ADynArray_size(dynArray); ++i) {
         ck_assert_double_eq(ADynArray_get(dynArray, i).x, tmpArray[i + 3].x);
         ck_assert_double_eq(ADynArray_get(dynArray, i).y, tmpArray[i + 3].y);
     }
+    ADynArray_clear(dynArray);
+    ck_assert_uint_eq(ADynArray_size(dynArray), 0);
+    ck_assert_uint_eq(ADynArray_capacity(dynArray), 16);
     ADynArray_destruct(dynArray);
     free(tmpArray);
 }
