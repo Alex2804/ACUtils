@@ -3,8 +3,8 @@
 #else
 #   include "../include/ACUtils/macros.h"
 #   include "../include/ACUtils/types.h"
-    ACUTILS_SHD_FUNC void* private_ACUtils_ADynArray_constructWithAllocator(size_t, ACUtilsReallocator, ACUtilsDeallocator);
-    ACUTILS_SHD_FUNC void private_ACUtils_ADynArray_destruct(void*);
+    ACUTILS_HD_FUNC void* private_ACUtils_ADynArray_constructWithAllocator(size_t, ACUtilsReallocator, ACUtilsDeallocator);
+    ACUTILS_HD_FUNC void private_ACUtils_ADynArray_destruct(void*);
 #endif
 
 #ifdef ACUTILS_ADYNARRAY_H /* if compiled as one source and not included from header, the definitions are excluded */
@@ -13,7 +13,7 @@
 #include <string.h>
 #include <math.h>
 
-ACUTILS_SIHD_FUNC size_t private_ACUtils_ADynArray_growStrategyGeneric(size_t requiredSize, size_t minCapacity, size_t maxCapacity, double multiplier, size_t maxDifSize) {
+ACUTILS_HD_FUNC size_t private_ACUtils_ADynArray_growStrategyGeneric(size_t requiredSize, size_t minCapacity, size_t maxCapacity, double multiplier, size_t maxDifSize) {
     double multiplierExponent;
     size_t capacity;
     if(requiredSize <= minCapacity)
@@ -34,11 +34,11 @@ static size_t private_ACUtils_ADynArray_growStrategyDefault(size_t requiredSize,
 
 A_DYNAMIC_ARRAY_DEFINITION(private_ACUtils_DynArray_Prototype, char);
 
-ACUTILS_SIHD_FUNC void* private_ACUtils_ADynArray_construct(size_t typeSize)
+ACUTILS_HD_FUNC void* private_ACUtils_ADynArray_construct(size_t typeSize)
 {
     return private_ACUtils_ADynArray_constructWithAllocator(typeSize, realloc, free);
 }
-ACUTILS_SHD_FUNC void* private_ACUtils_ADynArray_constructWithAllocator(size_t typeSize, ACUtilsReallocator reallocator,
+ACUTILS_HD_FUNC void* private_ACUtils_ADynArray_constructWithAllocator(size_t typeSize, ACUtilsReallocator reallocator,
                                                                        ACUtilsDeallocator deallocator)
 {
     struct private_ACUtils_DynArray_Prototype* prototype;
@@ -59,8 +59,7 @@ ACUTILS_SHD_FUNC void* private_ACUtils_ADynArray_constructWithAllocator(size_t t
     }
     return prototype;
 }
-
-ACUTILS_SHD_FUNC void private_ACUtils_ADynArray_destruct(void *dynArray)
+ACUTILS_HD_FUNC void private_ACUtils_ADynArray_destruct(void *dynArray)
 {
     if(dynArray != NULL) {
         struct private_ACUtils_DynArray_Prototype* prototype = (struct private_ACUtils_DynArray_Prototype*) dynArray;
@@ -69,22 +68,22 @@ ACUTILS_SHD_FUNC void private_ACUtils_ADynArray_destruct(void *dynArray)
     }
 }
 
-ACUTILS_SIHD_FUNC void private_ACUtils_ADynArray_setGrowStrategy(void* dynArray, ACUtilsGrowStrategy growStrategy)
+ACUTILS_HD_FUNC void private_ACUtils_ADynArray_setGrowStrategy(void* dynArray, ACUtilsGrowStrategy growStrategy)
 {
     if(dynArray != NULL)
         ((struct private_ACUtils_DynArray_Prototype*) dynArray)->growStrategy = growStrategy;
 }
 
-ACUTILS_SIHD_FUNC size_t private_ACUtils_ADynArray_size(const void *dynArray)
+ACUTILS_HD_FUNC size_t private_ACUtils_ADynArray_size(const void *dynArray)
 {
     return (dynArray == NULL) ? 0 : ((struct private_ACUtils_DynArray_Prototype*) dynArray)->size;
 }
-ACUTILS_SIHD_FUNC size_t private_ACUtils_ADynArray_capacity(const void *dynArray)
+ACUTILS_HD_FUNC size_t private_ACUtils_ADynArray_capacity(const void *dynArray)
 {
     return (dynArray == NULL) ? 0 : ((struct private_ACUtils_DynArray_Prototype*) dynArray)->capacity;
 }
 
-ACUTILS_SHD_FUNC bool private_ACUtils_ADynArray_reserve(void *dynArray, size_t reserveSize, bool forceExactSize, size_t typeSize)
+ACUTILS_HD_FUNC bool private_ACUtils_ADynArray_reserve(void *dynArray, size_t reserveSize, bool forceExactSize, size_t typeSize)
 {
     if(dynArray != NULL) {
         struct private_ACUtils_DynArray_Prototype* prototype = (struct private_ACUtils_DynArray_Prototype*) dynArray;
@@ -106,8 +105,7 @@ ACUTILS_SHD_FUNC bool private_ACUtils_ADynArray_reserve(void *dynArray, size_t r
     }
     return false;
 }
-
-ACUTILS_SHD_FUNC bool private_ACUtils_ADynArray_shrinkToFit(void *dynArray, size_t typeSize)
+ACUTILS_HD_FUNC bool private_ACUtils_ADynArray_shrinkToFit(void *dynArray, size_t typeSize)
 {
     if(dynArray != NULL) {
         struct private_ACUtils_DynArray_Prototype* prototype = (struct private_ACUtils_DynArray_Prototype*) dynArray;
@@ -128,10 +126,22 @@ ACUTILS_SHD_FUNC bool private_ACUtils_ADynArray_shrinkToFit(void *dynArray, size
     return false;
 }
 
-ACUTILS_SIHD_FUNC void private_ACUtils_ADynArray_clear(void *dynArray)
+ACUTILS_HD_FUNC void private_ACUtils_ADynArray_clear(void *dynArray)
 {
     if(dynArray != NULL)
         ((struct private_ACUtils_DynArray_Prototype*) dynArray)->size = 0;
+}
+ACUTILS_HD_FUNC void private_ACUtils_ADynArray_remove(void *dynArray, size_t index, size_t count, size_t typeSize)
+{
+    struct private_ACUtils_DynArray_Prototype* prototype = (struct private_ACUtils_DynArray_Prototype*) dynArray;
+    if(dynArray != NULL && count > 0 && index >= 0 && index < prototype->size) {
+        if(index + count <= prototype->size) {
+            memmove(prototype->buffer + (index * typeSize), prototype->buffer + ((index + count) * typeSize), (prototype->size - index - count) * typeSize);
+            prototype->size -= count;
+        } else {
+            prototype->size = index;
+        }
+    }
 }
 
 static bool private_ACUtils_DynArray_shiftElements(void *dynArray, size_t index, size_t count, size_t typeSize)
@@ -146,7 +156,7 @@ static bool private_ACUtils_DynArray_shiftElements(void *dynArray, size_t index,
     }
     return false;
 }
-ACUTILS_SHD_FUNC bool private_ACUtils_ADynArray_prepareInsertion(void* dynArray, size_t index, size_t valueCount, size_t typeSize)
+ACUTILS_HD_FUNC bool private_ACUtils_ADynArray_prepareInsertion(void* dynArray, size_t index, size_t valueCount, size_t typeSize)
 {
     if(dynArray != NULL && valueCount > 0) {
         struct private_ACUtils_DynArray_Prototype* prototype = (struct private_ACUtils_DynArray_Prototype*) dynArray;
@@ -161,7 +171,7 @@ ACUTILS_SHD_FUNC bool private_ACUtils_ADynArray_prepareInsertion(void* dynArray,
     }
     return valueCount == 0;
 }
-ACUTILS_SHD_FUNC bool private_ACUtils_ADynArray_insertArray(void *dynArray, size_t index, const void *array, size_t arraySize, size_t typeSize)
+ACUTILS_HD_FUNC bool private_ACUtils_ADynArray_insertArray(void *dynArray, size_t index, const void *array, size_t arraySize, size_t typeSize)
 {
     if(array == NULL)
         arraySize = 0;
@@ -173,29 +183,21 @@ ACUTILS_SHD_FUNC bool private_ACUtils_ADynArray_insertArray(void *dynArray, size
     return false;
 }
 
-ACUTILS_SHD_FUNC bool private_ACUtils_ADynArray_set(void *dynArray, size_t index, void *value, size_t typeSize)
+ACUTILS_HD_FUNC bool private_ACUtils_ADynArray_setRange(void *dynArray, size_t index, size_t count, void *value, size_t typeSize)
 {
+    size_t appendCount, i;
+    struct private_ACUtils_DynArray_Prototype* prototype = (struct private_ACUtils_DynArray_Prototype*) dynArray;
     if(dynArray == NULL)
         return false;
-    struct private_ACUtils_DynArray_Prototype* prototype = (struct private_ACUtils_DynArray_Prototype*) dynArray;
-    if(index >= prototype->size)
-        return private_ACUtils_ADynArray_insertArray(dynArray, prototype->size, value, 1, typeSize);
-    else
-        memcpy(prototype->buffer + (index * typeSize), value, typeSize);
+    if(index > prototype->size)
+        index = prototype->size;
+    appendCount = ((index + count < prototype->size) ? 0 : (index + count - prototype->size));
+    if(!private_ACUtils_ADynArray_reserve(dynArray, prototype->size + appendCount, false, typeSize))
+        return false;
+    prototype->size += appendCount;
+    for(i = 0; i < count; ++i)
+        memcpy(prototype->buffer + ((index + i) * typeSize), value, typeSize);
     return true;
-}
-
-ACUTILS_SHD_FUNC void private_ACUtils_ADynArray_remove(void *dynArray, size_t index, size_t count, size_t typeSize)
-{
-    struct private_ACUtils_DynArray_Prototype* prototype = (struct private_ACUtils_DynArray_Prototype*) dynArray;
-    if(dynArray != NULL && count > 0 && index >= 0 && index < prototype->size) {
-        if(index + count <= prototype->size) {
-            memmove(prototype->buffer + (index * typeSize), prototype->buffer + ((index + count) * typeSize), (prototype->size - index - count) * typeSize);
-            prototype->size -= count;
-        } else {
-            prototype->size = index;
-        }
-    }
 }
 
 #endif /* ACUTILS_ADYNARRAY_H */

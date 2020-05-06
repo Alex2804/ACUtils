@@ -23,24 +23,22 @@
  * The passed dynamic array type must be defined with A_DYNAMIC_ARRAY_DEFINITION(name, type).
  *
  * @param ArrayType The type of the dynamic array to construct.
- * @return A Pointer to the constructed Array.
+ * @return A Pointer to the constructed Array or NULL on failure.
  */
 #define ADynArray_construct(ArrayType) \
     ((ArrayType*) private_ACUtils_ADynArray_construct(sizeof(*((ArrayType*)NULL)->buffer)))
-
 /**
  * Constructs a dynamic array of the passed type and initializes it with size 0.
- * The passed dynamic array type must be defined with A_DYNAMIC_ARRAY_DEFINITION(name, type).
+ * The passed dynamic array type must be defined with A_DYNAMIC_ARRAY_DEFINITION(name, type) and the passed reallocator
+ * and deallocator must be pointer to a valid reallocator and deallocator!
  *
  * @param ArrayType The type of the dynamic array to construct.
- * @param allocator The function to allocate memory with.
- * @param reallocator The function to reallocate memory with.
- * @param deallocator The function to free memory with.
- * @return A Pointer to the constructed Array.
+ * @param reallocator The function to reallocate memory with. This must be not NULL!
+ * @param deallocator The function to free memory with. This must be not NULL!
+ * @return A Pointer to the constructed Array or NULL on failure.
  */
 #define ADynArray_constructWithAllocator(ArrayType, reallocator, deallocator) \
     ((ArrayType*) private_ACUtils_ADynArray_constructWithAllocator(sizeof(*((ArrayType*)NULL)->buffer), reallocator, deallocator))
-
 /**
  * Destructs the dynamic array and releases all held resources.
  *
@@ -80,7 +78,6 @@
  */
 #define ADynArray_buffer(dynArray) \
     (((dynArray) == NULL) ? NULL : (dynArray)->buffer)
-
 /**
  * @param dynArray The dynamic array to get the size from.
  * @return The size (number of elements) of the passed dynamic array.
@@ -110,7 +107,6 @@
  */
 #define ADynArray_reserve(dynArray, reserveSize) \
     private_ACUtils_ADynArray_reserve(dynArray, reserveSize, false, sizeof(*(dynArray)->buffer))
-
 /**
  * Resize dynArray to the minimum size to exactly fit its content, except the buffer is smaller than the minimum size
  * that the grow strategy returns (for passed size 0).
@@ -128,6 +124,18 @@
  */
 #define ADynArray_clear(dynArray) \
     private_ACUtils_ADynArray_clear(dynArray)
+/**
+ * Removes count elements in dynArray starting at index. This operation doesn't affect the capacity.
+ * The elements behind index + count are shifted to the right by count.
+ *
+ * If index + count is bigger or equal to the size of dynArray, all elements behind index gets removed.
+ *
+ * @param dynArray The dynamic array to remove elements from.
+ * @param index The start index from which count elements should be removed.
+ * @param count The number of elements to remove starting at index.
+ */
+#define ADynArray_remove(dynArray, index, count) \
+    private_ACUtils_ADynArray_remove(dynArray, index, count, sizeof(*(dynArray)->buffer))
 
 /**
  * Inserts the value into dynArray at index. If index is bigger or equal to the size of
@@ -141,7 +149,6 @@
  */
 #define ADynArray_insert(dynArray, index, value) \
     private_ACUtils_ADynArray_insertArray(dynArray, index, &(value), 1, sizeof(*(dynArray)->buffer))
-
 /**
  * Inserts the elements of array into dynArray at index. If index is bigger or equal to the size of
  * dynArray, the elements get appended.
@@ -157,7 +164,6 @@
  */
 #define ADynArray_insertArray(dynArray, index, array, arraySize) \
     private_ACUtils_ADynArray_insertArray(dynArray, index, array, arraySize, sizeof(*(dynArray)->buffer))
-
 /**
  * Inserts the elements of srcDynArray into destDynArray at index. If index is bigger or equal to the size of
  * destDynArray, the elements get appended.
@@ -211,27 +217,25 @@
  * Sets the element in dynArray at index to value. If index is bigger than the size of dynArray
  * The value is appended to dynArray as new element.
  *
- * @param dynArray The dynamic array to set the index of.
+ * @param dynArray The dynamic array to set the element of.
  * @param index The index at which the element should be set to value.
  * @param value The value that should be set at index. This must be an lvalue!
  * @return True if the value was set, false if not.
  */
 #define ADynArray_set(dynArray, index, value) \
-    private_ACUtils_ADynArray_set(dynArray, index, &(value), sizeof(*(dynArray)->buffer))
-
+    ADynArray_setRange(dynArray, index, 1, value)
 /**
- * Removes count elements in dynArray starting at index. This operation doesn't affect the capacity.
- * The elements behind index + count are shifted to the right by count.
+ * Sets count elements in dynArray starting from index to value. If index + count is bigger than the size of
+ * dynArray, the values that are out of bounds gets appended to dynArray as new elements.
  *
- * If index + count is bigger or equal to the size of dynArray, all elements behind index gets removed.
- *
- * @param dynArray The dynamic array to remove elements from.
- * @param index The start index from which count elements should be removed.
- * @param count The number of elements to remove starting at index.
+ * @param dynArray The dynamic array to set the elements of.
+ * @param index The index of the first element which should be set to value.
+ * @param count The number of elements to replace, starting at index.
+ * @param value The value that should be set at index. This must be an lvalue!
+ * @return True if the elements were set, false if not.
  */
-#define ADynArray_remove(dynArray, index, count) \
-    private_ACUtils_ADynArray_remove(dynArray, index, count, sizeof(*(dynArray)->buffer))
-
+#define ADynArray_setRange(dynArray, index, count, value) \
+    private_ACUtils_ADynArray_setRange(dynArray, index, count, &(value), sizeof(*(dynArray)->buffer))
 /**
  * Retrieves the element at index in dynArray.
  *
@@ -242,7 +246,7 @@
  * @return The element in dynArray at index.
  */
 #define ADynArray_get(dynArray, index) \
-    ((dynArray)->buffer[index])
+    (ADynArray_buffer(dynArray)[index])
 
 #ifdef ACUTILS_ONE_SOURCE
 #   include "../../src/adynarray.c"
@@ -257,9 +261,9 @@
     bool private_ACUtils_ADynArray_reserve(void*, size_t, bool, size_t);
     bool private_ACUtils_ADynArray_shrinkToFit(void*, size_t);
     void private_ACUtils_ADynArray_clear(void*);
-    bool private_ACUtils_ADynArray_insertArray(void*, size_t, const void*, size_t, size_t);
-    bool private_ACUtils_ADynArray_set(void*, size_t, void*, size_t);
     void private_ACUtils_ADynArray_remove(void*, size_t, size_t, size_t);
+    bool private_ACUtils_ADynArray_insertArray(void*, size_t, const void*, size_t, size_t);
+    bool private_ACUtils_ADynArray_setRange(void*, size_t, size_t, void*, size_t);
 #endif
 
 #endif /* ACUTILS_ADYNARRAY_H */

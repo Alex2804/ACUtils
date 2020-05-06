@@ -21,20 +21,14 @@
 #   endif
 #endif
 
-/*
- * ACUTILS_SHD_FUNC: static (header) function
- * ACUTILS_SIHD_FUNC: static inline (header) function (>=C99) or static (header) function (<C99)
- */
 #ifdef ACUTILS_ONE_SOURCE
-#   define ACUTILS_SHD_FUNC static
 #   ifdef ACUTILS_C_STANDARD_99
-#       define ACUTILS_SIHD_FUNC static inline
+#       define ACUTILS_HD_FUNC static inline
 #   else
-#       define ACUTILS_SIHD_FUNC static
+#       define ACUTILS_HD_FUNC static
 #   endif
 #else
-#   define ACUTILS_SHD_FUNC
-#   define ACUTILS_SIHD_FUNC
+#   define ACUTILS_HD_FUNC
 #endif
 
 #endif /* ACUTILS_MACROS_H */
