@@ -6,24 +6,24 @@
 #include "ACUtils/adynarray.h"
 
 static size_t private_ACUtilsTest_ADynArray_reallocCount = 0;
+static size_t private_ACUtilsTest_ADynArray_reallocFailCounter = 0;
 static bool private_ACUtilsTest_ADynArray_reallocFail = false;
 static size_t private_ACUtilsTest_ADynArray_freeCount = 0;
 
-static void* private_ACUtilsTest_ADynArray_realloc(void* ptr, size_t size) {
-    if(!private_ACUtilsTest_ADynArray_reallocFail) {
+static void* private_ACUtilsTest_ADynArray_realloc(void *ptr, size_t size) {
+    if(!private_ACUtilsTest_ADynArray_reallocFail || private_ACUtilsTest_ADynArray_reallocFailCounter > 0) {
+        if(private_ACUtilsTest_ADynArray_reallocFail)
+            --private_ACUtilsTest_ADynArray_reallocFailCounter;
         void* tmp = realloc(ptr, size);
-        if(tmp != NULL) {
+        if(tmp != NULL)
             ++private_ACUtilsTest_ADynArray_reallocCount;
-        }
         return tmp;
-    } else {
-        return NULL;
     }
+    return NULL;
 }
-static void private_ACUtilsTest_ADynArray_free(void* ptr) {
-    if(ptr != NULL) {
+static void private_ACUtilsTest_ADynArray_free(void *ptr) {
+    if(ptr != NULL)
         ++private_ACUtilsTest_ADynArray_freeCount;
-    }
     free(ptr);
 }
 
@@ -42,13 +42,13 @@ struct private_ACUtilsTest_ADynArray_PointStruct
     double x, y;
 };
 
-A_DYNAMIC_ARRAY_DEFINITION(ADynTestPointArray, struct private_ACUtilsTest_ADynArray_PointStruct);
-A_DYNAMIC_ARRAY_DEFINITION(ADynCharArray, char);
+A_DYNAMIC_ARRAY_DEFINITION(private_ACUtilsTest_ADynArray_PointArray, struct private_ACUtilsTest_ADynArray_PointStruct);
+A_DYNAMIC_ARRAY_DEFINITION(private_ACUtilsTest_ADynArray_CharArray, char);
 
 START_TEST(test_ADynArray_construct_destruct_valid)
 {
-    struct ADynCharArray* array;
-    array = ADynArray_construct(struct ADynCharArray);
+    struct private_ACUtilsTest_ADynArray_CharArray *array;
+    array = ADynArray_construct(struct private_ACUtilsTest_ADynArray_CharArray);
     ck_assert_uint_eq(array->size, 0);
     ck_assert_uint_eq(array->capacity, private_ACUtilsTest_ADynArray_capacityMin);
     ck_assert_ptr_nonnull(array->buffer);
@@ -58,10 +58,10 @@ START_TEST(test_ADynArray_construct_destruct_valid)
 END_TEST
 START_TEST(test_ADynArray_construct_destruct_withAllocator_valid)
 {
-    struct ADynCharArray* array;
+    struct private_ACUtilsTest_ADynArray_CharArray *array;
     private_ACUtilsTest_ADynArray_reallocFail = false;
     private_ACUtilsTest_ADynArray_reallocCount = private_ACUtilsTest_ADynArray_freeCount = 0;
-    array = ADynArray_constructWithAllocator(struct ADynCharArray, private_ACUtilsTest_ADynArray_realloc, private_ACUtilsTest_ADynArray_free);
+    array = ADynArray_constructWithAllocator(struct private_ACUtilsTest_ADynArray_CharArray, private_ACUtilsTest_ADynArray_realloc, private_ACUtilsTest_ADynArray_free);
     ck_assert_uint_eq(array->size, 0);
     ck_assert_uint_eq(array->capacity, private_ACUtilsTest_ADynArray_capacityMin);
     ck_assert_ptr_nonnull(array->buffer);
@@ -72,31 +72,37 @@ START_TEST(test_ADynArray_construct_destruct_withAllocator_valid)
 END_TEST
 START_TEST(test_ADynArray_construct_destruct_withAllocator_invalid)
 {
-    struct ADynCharArray* array;
+    struct private_ACUtilsTest_ADynArray_CharArray *array;
     private_ACUtilsTest_ADynArray_reallocFail = false;
     private_ACUtilsTest_ADynArray_reallocCount = private_ACUtilsTest_ADynArray_freeCount = 0;
-    array = ADynArray_constructWithAllocator(struct ADynCharArray, NULL, private_ACUtilsTest_ADynArray_free);
+    array = ADynArray_constructWithAllocator(struct private_ACUtilsTest_ADynArray_CharArray, NULL, private_ACUtilsTest_ADynArray_free);
     ck_assert_ptr_null(array);
-    array = ADynArray_constructWithAllocator(struct ADynCharArray, private_ACUtilsTest_ADynArray_realloc, NULL);
+    array = ADynArray_constructWithAllocator(struct private_ACUtilsTest_ADynArray_CharArray, private_ACUtilsTest_ADynArray_realloc, NULL);
     ck_assert_ptr_null(array);
 }
 END_TEST
 START_TEST(test_ADynArray_construct_destruct_noMemoryAvailable)
 {
-    struct ADynCharArray* array;
+    struct private_ACUtilsTest_ADynArray_CharArray *array;
+    private_ACUtilsTest_ADynArray_reallocFailCounter = 0;
     private_ACUtilsTest_ADynArray_reallocFail = true;
     private_ACUtilsTest_ADynArray_reallocCount = private_ACUtilsTest_ADynArray_freeCount = 0;
-    array = ADynArray_constructWithAllocator(struct ADynCharArray, private_ACUtilsTest_ADynArray_realloc,
-                                             private_ACUtilsTest_ADynArray_free);
+    array = ADynArray_constructWithAllocator(struct private_ACUtilsTest_ADynArray_CharArray,
+            private_ACUtilsTest_ADynArray_realloc, private_ACUtilsTest_ADynArray_free);
     ck_assert_ptr_null(array);
-    ADynArray_destruct(array); /* should do nothing */
     ck_assert_uint_eq(private_ACUtilsTest_ADynArray_reallocCount, 0);
     ck_assert_uint_eq(private_ACUtilsTest_ADynArray_freeCount, 0);
+    private_ACUtilsTest_ADynArray_reallocFailCounter = 1;
+    array = ADynArray_constructWithAllocator(struct private_ACUtilsTest_ADynArray_CharArray,
+            private_ACUtilsTest_ADynArray_realloc, private_ACUtilsTest_ADynArray_free);
+    ck_assert_ptr_null(array);
+    ck_assert_uint_eq(private_ACUtilsTest_ADynArray_reallocCount, 1);
+    ck_assert_uint_eq(private_ACUtilsTest_ADynArray_freeCount, 1);
 }
 END_TEST
 START_TEST(test_ADynArray_construct_destruct_nullptr)
 {
-    struct ADynCharArray* array = NULL;
+    struct private_ACUtilsTest_ADynArray_CharArray *array = NULL;
     private_ACUtilsTest_ADynArray_freeCount = 0;
     ADynArray_destruct(array); /* should do nothing */
     ck_assert_uint_eq(private_ACUtilsTest_ADynArray_freeCount, 0);
@@ -106,7 +112,7 @@ END_TEST
 
 START_TEST(test_ADynArray_setGrowStrategy)
 {
-    struct ADynCharArray array = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
+    struct private_ACUtilsTest_ADynArray_CharArray array = {.reallocator = NULL, .deallocator = NULL};
     array.capacity = 0;
     array.buffer = NULL;
     array.growStrategy = NULL;
@@ -115,14 +121,14 @@ START_TEST(test_ADynArray_setGrowStrategy)
     ck_assert_ptr_eq(array.growStrategy, private_ACUtilsTest_ADynArray_growStrategy);
     ADynArray_setGrowStrategy(&array, NULL);
     ck_assert_ptr_null(array.growStrategy);
-    struct ADynCharArray* arrayPtr = NULL;
+    struct private_ACUtilsTest_ADynArray_CharArray *arrayPtr = NULL;
     ADynArray_setGrowStrategy(arrayPtr, private_ACUtilsTest_ADynArray_growStrategy);
 }
 
 
 START_TEST(test_ADynArray_size_valid)
 {
-    struct ADynCharArray array = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
+    struct private_ACUtilsTest_ADynArray_CharArray array = {.reallocator = NULL, .deallocator = NULL};
     array.capacity = 0;
     array.buffer = NULL;
     array.growStrategy = NULL;
@@ -135,14 +141,14 @@ START_TEST(test_ADynArray_size_valid)
 }
 START_TEST(test_ADynArray_size_nullptr)
 {
-    struct ADynCharArray* arrayPtr = NULL;
+    struct private_ACUtilsTest_ADynArray_CharArray *arrayPtr = NULL;
     ck_assert_uint_eq(ADynArray_size(arrayPtr), 0);
 }
 
 
 START_TEST(test_ADynArray_capacity_valid)
 {
-    struct ADynCharArray array = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
+    struct private_ACUtilsTest_ADynArray_CharArray array = {.reallocator = NULL, .deallocator = NULL};
     array.size = 0;
     array.buffer = NULL;
     array.growStrategy = NULL;
@@ -155,30 +161,57 @@ START_TEST(test_ADynArray_capacity_valid)
 }
 START_TEST(test_ADynArray_capacity_nullptr)
 {
-    struct ADynCharArray* arrayPtr = NULL;
+    struct private_ACUtilsTest_ADynArray_CharArray *arrayPtr = NULL;
     ck_assert_uint_eq(ADynArray_capacity(arrayPtr), 0);
+}
+
+
+START_TEST(test_ADynArray_buffer_valid)
+{
+    struct private_ACUtilsTest_ADynArray_CharArray array = {.reallocator = NULL, .deallocator = NULL};
+    array.size = 0;
+    array.capacity = 0;
+    array.buffer = (char*) 42;
+    ck_assert_ptr_eq(ADynArray_buffer(&array), (char*) 42);
+    array.buffer = (char*) 13;
+    ck_assert_ptr_eq(ADynArray_buffer(&array), (char*) 13);
+    array.buffer = NULL;
+    ck_assert_ptr_null(ADynArray_buffer(&array));
+}
+START_TEST(test_ADynArray_buffer_nullptr)
+{
+    struct private_ACUtilsTest_ADynArray_CharArray *array = NULL;
+    ck_assert_ptr_null(ADynArray_buffer(array));
 }
 
 
 START_TEST(test_ADynArray_reserve_success_enoughCapacityBufferNotNull)
 {
-    struct ADynCharArray array = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
-    array.size = 0;
+    size_t i;
+    struct private_ACUtilsTest_ADynArray_CharArray array = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
+    array.size = private_ACUtilsTest_ADynArray_capacityMin;
     array.growStrategy = NULL;
     array.capacity = private_ACUtilsTest_ADynArray_capacityMin;
     private_ACUtilsTest_ADynArray_reallocFail = false;
     array.buffer = array.reallocator(NULL, array.capacity);
+    for(i = 0; i < array.size - 1; ++i)
+        array.buffer[i] = '5';
+    array.buffer[array.size - 1] = '0';
+    private_ACUtilsTest_ADynArray_reallocFailCounter = 0;
     private_ACUtilsTest_ADynArray_reallocFail = true;
     ck_assert_uint_eq(ADynArray_reserve(&array, array.capacity), true);
-    ck_assert_uint_eq(array.size, 0);
+    ck_assert_uint_eq(array.size, private_ACUtilsTest_ADynArray_capacityMin);
     ck_assert_uint_eq(array.capacity, private_ACUtilsTest_ADynArray_capacityMin);
     ck_assert_ptr_nonnull(array.buffer);
+    for(i = 0; i < private_ACUtilsTest_ADynArray_capacityMin - 1; ++i)
+        ck_assert_int_eq(array.buffer[i], '5');
+    ck_assert_int_eq(array.buffer[private_ACUtilsTest_ADynArray_capacityMin - 1], '0');
     ck_assert_ptr_null(array.growStrategy);
     array.deallocator(array.buffer);
 }
 START_TEST(test_ADynArray_reserve_success_enoughCapacityBufferNull)
 {
-    struct ADynCharArray array = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
+    struct private_ACUtilsTest_ADynArray_CharArray array = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
     array.size = 0;
     array.growStrategy = private_ACUtilsTest_ADynArray_growStrategy;
     array.capacity = private_ACUtilsTest_ADynArray_capacityMin;
@@ -196,17 +229,24 @@ START_TEST(test_ADynArray_reserve_success_enoughCapacityBufferNull)
 END_TEST
 START_TEST(test_ADynArray_reserve_success_notEnoughCapacity)
 {
-    struct ADynCharArray array = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
-    array.size = 0;
+    size_t i;
+    struct private_ACUtilsTest_ADynArray_CharArray array = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
+    array.size = private_ACUtilsTest_ADynArray_capacityMin;
     array.growStrategy = private_ACUtilsTest_ADynArray_growStrategy;
     array.capacity = private_ACUtilsTest_ADynArray_capacityMin;
     private_ACUtilsTest_ADynArray_reallocFail = false;
     array.buffer = array.reallocator(NULL, array.capacity);
+    for(i = 0; i < array.size - 1; ++i)
+        array.buffer[i] = '5';
+    array.buffer[array.size - 1] = '0';
     private_ACUtilsTest_ADynArray_reallocCount = 0;
     ck_assert_uint_eq(ADynArray_reserve(&array, private_ACUtilsTest_ADynArray_capacityMax), true);
-    ck_assert_uint_eq(array.size, 0);
+    ck_assert_uint_eq(array.size, private_ACUtilsTest_ADynArray_capacityMin);
     ck_assert_uint_eq(array.capacity, private_ACUtilsTest_ADynArray_capacityMax);
     ck_assert_ptr_nonnull(array.buffer);
+    for(i = 0; i < private_ACUtilsTest_ADynArray_capacityMin - 1; ++i)
+        ck_assert_int_eq(array.buffer[i], '5');
+    ck_assert_int_eq(array.buffer[private_ACUtilsTest_ADynArray_capacityMin - 1], '0');
     ck_assert_ptr_nonnull(array.growStrategy);
     ck_assert_uint_eq(private_ACUtilsTest_ADynArray_reallocCount, 1);
     array.deallocator(array.buffer);
@@ -214,49 +254,74 @@ START_TEST(test_ADynArray_reserve_success_notEnoughCapacity)
 END_TEST
 START_TEST(test_ADynArray_reserve_failure_biggerThanMaxCapacity)
 {
-    struct ADynCharArray array = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
-    array.size = 0;
+    size_t i;
+    struct private_ACUtilsTest_ADynArray_CharArray array = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
+    array.size = private_ACUtilsTest_ADynArray_capacityMin;
     array.growStrategy = private_ACUtilsTest_ADynArray_growStrategy;
     array.capacity = private_ACUtilsTest_ADynArray_capacityMin;
-    array.buffer = NULL;
     private_ACUtilsTest_ADynArray_reallocFail = false;
+    array.buffer = array.reallocator(NULL, array.capacity);
+    for(i = 0; i < array.size - 1; ++i)
+        array.buffer[i] = '5';
+    array.buffer[array.size - 1] = '0';
     private_ACUtilsTest_ADynArray_reallocCount = 0;
     ck_assert_uint_eq(ADynArray_reserve(&array, private_ACUtilsTest_ADynArray_capacityMax + 1), false);
-    ck_assert_uint_eq(array.size, 0);
+    ck_assert_uint_eq(array.size, private_ACUtilsTest_ADynArray_capacityMin);
     ck_assert_uint_eq(array.capacity, private_ACUtilsTest_ADynArray_capacityMin);
-    ck_assert_ptr_null(array.buffer);
+    ck_assert_ptr_nonnull(array.buffer);
+    for(i = 0; i < private_ACUtilsTest_ADynArray_capacityMin - 1; ++i)
+        ck_assert_int_eq(array.buffer[i], '5');
+    ck_assert_int_eq(array.buffer[private_ACUtilsTest_ADynArray_capacityMin - 1], '0');
     ck_assert_ptr_nonnull(array.growStrategy);
     ck_assert_uint_eq(private_ACUtilsTest_ADynArray_reallocCount, 0);
+    array.deallocator(array.buffer);
 }
 END_TEST
 START_TEST(test_ADynArray_reserve_failure_noMemoryAvailable)
 {
-    struct ADynCharArray array = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
-    array.size = 0;
+    size_t i;
+    struct private_ACUtilsTest_ADynArray_CharArray array = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
+    array.size = private_ACUtilsTest_ADynArray_capacityMin;
     array.growStrategy = private_ACUtilsTest_ADynArray_growStrategy;
     array.capacity = private_ACUtilsTest_ADynArray_capacityMin;
-    array.buffer = NULL;
+    private_ACUtilsTest_ADynArray_reallocFail = false;
+    array.buffer = array.reallocator(NULL, array.capacity);
+    for(i = 0; i < array.size - 1; ++i)
+        array.buffer[i] = '5';
+    array.buffer[array.size - 1] = '0';
+    private_ACUtilsTest_ADynArray_reallocFailCounter = 0;
     private_ACUtilsTest_ADynArray_reallocFail = true;
     ck_assert_uint_eq(ADynArray_reserve(&array, private_ACUtilsTest_ADynArray_capacityMax), false);
-    ck_assert_uint_eq(array.size, 0);
+    ck_assert_uint_eq(array.size, private_ACUtilsTest_ADynArray_capacityMin);
     ck_assert_uint_eq(array.capacity, private_ACUtilsTest_ADynArray_capacityMin);
-    ck_assert_ptr_null(array.buffer);
+    ck_assert_ptr_nonnull(array.buffer);
+    for(i = 0; i < private_ACUtilsTest_ADynArray_capacityMin - 1; ++i)
+        ck_assert_int_eq(array.buffer[i], '5');
+    ck_assert_int_eq(array.buffer[private_ACUtilsTest_ADynArray_capacityMin - 1], '0');
     ck_assert_ptr_nonnull(array.growStrategy);
+    array.deallocator(array.buffer);
 }
 END_TEST
 START_TEST(test_ADynArray_reserve_failure_growStrategyNull)
 {
-    struct ADynCharArray array = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
-    array.size = 0;
+    size_t i;
+    struct private_ACUtilsTest_ADynArray_CharArray array = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
+    array.size = private_ACUtilsTest_ADynArray_capacityMin;
     array.growStrategy = NULL;
     array.capacity = private_ACUtilsTest_ADynArray_capacityMin;
-    array.buffer = NULL;
     private_ACUtilsTest_ADynArray_reallocFail = false;
+    array.buffer = array.reallocator(NULL, array.capacity);
+    for(i = 0; i < array.size - 1; ++i)
+        array.buffer[i] = '5';
+    array.buffer[array.size - 1] = '0';
     private_ACUtilsTest_ADynArray_reallocCount = 0;
     ck_assert_uint_eq(ADynArray_reserve(&array, private_ACUtilsTest_ADynArray_capacityMax + 5), true);
-    ck_assert_uint_eq(array.size, 0);
+    ck_assert_uint_eq(array.size, private_ACUtilsTest_ADynArray_capacityMin);
     ck_assert_uint_eq(array.capacity, private_ACUtilsTest_ADynArray_capacityMax + 5);
     ck_assert_ptr_nonnull(array.buffer);
+    for(i = 0; i < private_ACUtilsTest_ADynArray_capacityMin - 1; ++i)
+        ck_assert_int_eq(array.buffer[i], '5');
+    ck_assert_int_eq(array.buffer[private_ACUtilsTest_ADynArray_capacityMin - 1], '0');
     ck_assert_ptr_null(array.growStrategy);
     ck_assert_uint_eq(private_ACUtilsTest_ADynArray_reallocCount, 1);
     array.deallocator(array.buffer);
@@ -264,7 +329,7 @@ START_TEST(test_ADynArray_reserve_failure_growStrategyNull)
 END_TEST
 START_TEST(test_ADynArray_reserve_failure_nullptr)
 {
-    struct ADynCharArray* arrayPtr = NULL;
+    struct private_ACUtilsTest_ADynArray_CharArray *arrayPtr = NULL;
     private_ACUtilsTest_ADynArray_reallocFail = false;
     private_ACUtilsTest_ADynArray_reallocCount = 0;
     ck_assert_uint_eq(ADynArray_reserve(arrayPtr, private_ACUtilsTest_ADynArray_capacityMax), false);
@@ -275,11 +340,15 @@ END_TEST
 
 START_TEST(test_ADynArray_shrinkToFit_success_hasLeastCapacityBufferNotNull)
 {
-    struct ADynCharArray array = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
+    size_t i;
+    struct private_ACUtilsTest_ADynArray_CharArray array = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
     array.size = private_ACUtilsTest_ADynArray_capacityMin - 1;
     array.capacity = private_ACUtilsTest_ADynArray_capacityMin;
     private_ACUtilsTest_ADynArray_reallocFail = false;
     array.buffer = array.reallocator(NULL, array.capacity);
+    for(i = 0; i < array.size - 1; ++i)
+        array.buffer[i] = '5';
+    array.buffer[array.size - 1] = '0';
     array.growStrategy = private_ACUtilsTest_ADynArray_growStrategy;
     private_ACUtilsTest_ADynArray_reallocFail = false;
     private_ACUtilsTest_ADynArray_reallocCount = 0;
@@ -287,13 +356,16 @@ START_TEST(test_ADynArray_shrinkToFit_success_hasLeastCapacityBufferNotNull)
     ck_assert_uint_eq(array.size, private_ACUtilsTest_ADynArray_capacityMin - 1);
     ck_assert_uint_eq(array.capacity, private_ACUtilsTest_ADynArray_capacityMin);
     ck_assert_ptr_nonnull(array.buffer);
+    for(i = 0; i < private_ACUtilsTest_ADynArray_capacityMin - 2; ++i)
+        ck_assert_int_eq(array.buffer[i], '5');
+    ck_assert_int_eq(array.buffer[private_ACUtilsTest_ADynArray_capacityMin - 2], '0');
     ck_assert_ptr_nonnull(array.growStrategy);
     ck_assert_uint_eq(private_ACUtilsTest_ADynArray_reallocCount, 0);
     array.deallocator(array.buffer);
 }
 START_TEST(test_ADynArray_shrinkToFit_success_hasLeastCapacityBufferNull)
 {
-    struct ADynCharArray array = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
+    struct private_ACUtilsTest_ADynArray_CharArray array = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
     array.size = private_ACUtilsTest_ADynArray_capacityMin - 1;
     array.capacity = private_ACUtilsTest_ADynArray_capacityMin;
     array.buffer = NULL;
@@ -311,17 +383,24 @@ START_TEST(test_ADynArray_shrinkToFit_success_hasLeastCapacityBufferNull)
 END_TEST
 START_TEST(test_ADynArray_shrinkToFit_success_hasNotLeastCapacity)
 {
-    struct ADynCharArray array = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
+    size_t i;
+    struct private_ACUtilsTest_ADynArray_CharArray array = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
     array.size = private_ACUtilsTest_ADynArray_capacityMin - 1;
     array.capacity = private_ACUtilsTest_ADynArray_growStrategy(private_ACUtilsTest_ADynArray_capacityMin + 1, sizeof(char));
     private_ACUtilsTest_ADynArray_reallocFail = false;
     array.buffer = array.reallocator(NULL, array.capacity);
+    for(i = 0; i < array.size - 1; ++i)
+        array.buffer[i] = '5';
+    array.buffer[array.size - 1] = '0';
     array.growStrategy = private_ACUtilsTest_ADynArray_growStrategy;
     private_ACUtilsTest_ADynArray_reallocCount = 0;
     ck_assert_uint_eq(ADynArray_shrinkToFit(&array), true);
     ck_assert_uint_eq(array.size, private_ACUtilsTest_ADynArray_capacityMin - 1);
     ck_assert_uint_eq(array.capacity, private_ACUtilsTest_ADynArray_capacityMin);
     ck_assert_ptr_nonnull(array.buffer);
+    for(i = 0; i < private_ACUtilsTest_ADynArray_capacityMin - 2; ++i)
+        ck_assert_int_eq(array.buffer[i], '5');
+    ck_assert_int_eq(array.buffer[private_ACUtilsTest_ADynArray_capacityMin - 2], '0');
     ck_assert_ptr_nonnull(array.growStrategy);
     ck_assert_uint_eq(private_ACUtilsTest_ADynArray_reallocCount, 1);
     array.deallocator(array.buffer);
@@ -329,34 +408,49 @@ START_TEST(test_ADynArray_shrinkToFit_success_hasNotLeastCapacity)
 END_TEST
 START_TEST(test_ADynArray_shrinkToFit_failure_noMemoryAvailable)
 {
-    struct ADynCharArray array = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
+    size_t i;
+    struct private_ACUtilsTest_ADynArray_CharArray array = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
     array.size = private_ACUtilsTest_ADynArray_capacityMin - 1;
     array.capacity = private_ACUtilsTest_ADynArray_growStrategy(private_ACUtilsTest_ADynArray_capacityMin + 1, sizeof(char));
     private_ACUtilsTest_ADynArray_reallocFail = false;
     array.buffer = array.reallocator(NULL, array.capacity);
+    for(i = 0; i < array.size - 1; ++i)
+        array.buffer[i] = '5';
+    array.buffer[array.size - 1] = '0';
     array.growStrategy = private_ACUtilsTest_ADynArray_growStrategy;
+    private_ACUtilsTest_ADynArray_reallocFailCounter = 0;
     private_ACUtilsTest_ADynArray_reallocFail = true;
     ck_assert_uint_eq(ADynArray_shrinkToFit(&array), false);
     ck_assert_uint_eq(array.size, private_ACUtilsTest_ADynArray_capacityMin - 1);
     ck_assert_uint_eq(array.capacity, private_ACUtilsTest_ADynArray_growStrategy(private_ACUtilsTest_ADynArray_capacityMin + 1, sizeof(char)));
     ck_assert_ptr_nonnull(array.buffer);
+    for(i = 0; i < private_ACUtilsTest_ADynArray_capacityMin - 2; ++i)
+        ck_assert_int_eq(array.buffer[i], '5');
+    ck_assert_int_eq(array.buffer[private_ACUtilsTest_ADynArray_capacityMin - 2], '0');
     ck_assert_ptr_nonnull(array.growStrategy);
     array.deallocator(array.buffer);
 }
 END_TEST
 START_TEST(test_ADynArray_shrinkToFit_failure_growStrategyNull)
 {
-    struct ADynCharArray array = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
+    size_t i;
+    struct private_ACUtilsTest_ADynArray_CharArray array = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
     array.size = private_ACUtilsTest_ADynArray_capacityMin - 1;
     array.capacity = private_ACUtilsTest_ADynArray_growStrategy(private_ACUtilsTest_ADynArray_capacityMin + 1, sizeof(char));
     private_ACUtilsTest_ADynArray_reallocFail = false;
     array.buffer = array.reallocator(NULL, array.capacity);
+    for(i = 0; i < array.size - 1; ++i)
+        array.buffer[i] = '5';
+    array.buffer[array.size - 1] = '0';
     array.growStrategy = NULL;
     private_ACUtilsTest_ADynArray_reallocCount = 0;
     ck_assert_uint_eq(ADynArray_shrinkToFit(&array), false);
     ck_assert_uint_eq(array.size, private_ACUtilsTest_ADynArray_capacityMin - 1);
     ck_assert_uint_eq(array.capacity, private_ACUtilsTest_ADynArray_growStrategy(private_ACUtilsTest_ADynArray_capacityMin + 1, sizeof(char)));
     ck_assert_ptr_nonnull(array.buffer);
+    for(i = 0; i < private_ACUtilsTest_ADynArray_capacityMin - 2; ++i)
+        ck_assert_int_eq(array.buffer[i], '5');
+    ck_assert_int_eq(array.buffer[private_ACUtilsTest_ADynArray_capacityMin - 2], '0');
     ck_assert_ptr_null(array.growStrategy);
     ck_assert_uint_eq(private_ACUtilsTest_ADynArray_reallocCount, 0);
     array.deallocator(array.buffer);
@@ -364,7 +458,7 @@ START_TEST(test_ADynArray_shrinkToFit_failure_growStrategyNull)
 END_TEST
 START_TEST(test_ADynArray_shrinkToFit_failure_nullptr)
 {
-    struct ADynCharArray* arrayPtr = NULL;
+    struct private_ACUtilsTest_ADynArray_CharArray *arrayPtr = NULL;
     private_ACUtilsTest_ADynArray_reallocFail = false;
     private_ACUtilsTest_ADynArray_reallocCount = 0;
     ck_assert_uint_eq(ADynArray_shrinkToFit(arrayPtr), false);
@@ -375,11 +469,12 @@ END_TEST
 
 START_TEST(test_ADynArray_clear)
 {
-    struct ADynCharArray array = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
+    struct private_ACUtilsTest_ADynArray_CharArray array = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
     array.size = private_ACUtilsTest_ADynArray_capacityMin + 1;
     array.growStrategy = NULL;
     array.capacity = (size_t) (private_ACUtilsTest_ADynArray_capacityMin * private_ACUtilsTest_ADynArray_capacityMul);
     array.buffer = NULL;
+    private_ACUtilsTest_ADynArray_reallocFailCounter = 0;
     private_ACUtilsTest_ADynArray_reallocFail = true;
     private_ACUtilsTest_ADynArray_reallocCount = 0;
     ADynArray_clear(&array);
@@ -392,7 +487,7 @@ START_TEST(test_ADynArray_clear)
 END_TEST
 START_TEST(test_ADynArray_clear_nullptr)
 {
-    struct ADynCharArray* arrayPtr = NULL;
+    struct private_ACUtilsTest_ADynArray_CharArray *arrayPtr = NULL;
     private_ACUtilsTest_ADynArray_reallocFail = false;
     private_ACUtilsTest_ADynArray_reallocCount = 0;
     ADynArray_clear(arrayPtr);
@@ -403,7 +498,7 @@ END_TEST
 
 START_TEST(test_ADynArray_remove_indexRangeInBounds)
 {
-    struct ADynCharArray array = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
+    struct private_ACUtilsTest_ADynArray_CharArray array = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
     array.size = 11;
     array.growStrategy = private_ACUtilsTest_ADynArray_growStrategy;
     array.capacity = 16;
@@ -423,7 +518,7 @@ START_TEST(test_ADynArray_remove_indexRangeInBounds)
 END_TEST
 START_TEST(test_ADynArray_remove_rangeBeyondBounds)
 {
-    struct ADynCharArray array = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
+    struct private_ACUtilsTest_ADynArray_CharArray array = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
     array.size = 11;
     array.growStrategy = private_ACUtilsTest_ADynArray_growStrategy;
     array.capacity = 16;
@@ -442,7 +537,7 @@ START_TEST(test_ADynArray_remove_rangeBeyondBounds)
 END_TEST
 START_TEST(test_ADynArray_remove_zeroRange)
 {
-    struct ADynCharArray array = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
+    struct private_ACUtilsTest_ADynArray_CharArray array = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
     array.size = 11;
     array.growStrategy = private_ACUtilsTest_ADynArray_growStrategy;
     array.capacity = 16;
@@ -462,7 +557,7 @@ START_TEST(test_ADynArray_remove_zeroRange)
 END_TEST
 START_TEST(test_ADynArray_remove_indexBeyoundBounds)
 {
-    struct ADynCharArray array = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
+    struct private_ACUtilsTest_ADynArray_CharArray array = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
     array.size = 11;
     array.growStrategy = private_ACUtilsTest_ADynArray_growStrategy;
     array.capacity = 16;
@@ -482,7 +577,7 @@ START_TEST(test_ADynArray_remove_indexBeyoundBounds)
 END_TEST
 START_TEST(test_ADynArray_remove_nullptr)
 {
-    struct ADynCharArray *arrayPtr = NULL;
+    struct private_ACUtilsTest_ADynArray_CharArray *arrayPtr = NULL;
     private_ACUtilsTest_ADynArray_reallocFail = false;
     private_ACUtilsTest_ADynArray_reallocCount = 0;
     ADynArray_remove(arrayPtr, 5, 10);
@@ -493,7 +588,7 @@ END_TEST
 
 START_TEST(test_ADynArray_insert_success_zeroIndex)
 {
-    struct ADynCharArray array = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
+    struct private_ACUtilsTest_ADynArray_CharArray array = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
     array.size = 5;
     array.growStrategy = private_ACUtilsTest_ADynArray_growStrategy;
     array.capacity = 8;
@@ -515,7 +610,7 @@ START_TEST(test_ADynArray_insert_success_zeroIndex)
 END_TEST
 START_TEST(test_ADynArray_insert_success_middleIndex)
 {
-    struct ADynCharArray array = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
+    struct private_ACUtilsTest_ADynArray_CharArray array = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
     array.size = 5;
     array.growStrategy = private_ACUtilsTest_ADynArray_growStrategy;
     array.capacity = 8;
@@ -537,7 +632,7 @@ START_TEST(test_ADynArray_insert_success_middleIndex)
 END_TEST
 START_TEST(test_ADynArray_insert_success_endIndex)
 {
-    struct ADynCharArray array = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
+    struct private_ACUtilsTest_ADynArray_CharArray array = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
     array.size = 5;
     array.growStrategy = private_ACUtilsTest_ADynArray_growStrategy;
     array.capacity = 8;
@@ -559,7 +654,7 @@ START_TEST(test_ADynArray_insert_success_endIndex)
 END_TEST
 START_TEST(test_ADynArray_insert_success_beyondEndIndex)
 {
-    struct ADynCharArray array = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
+    struct private_ACUtilsTest_ADynArray_CharArray array = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
     array.size = 5;
     array.growStrategy = private_ACUtilsTest_ADynArray_growStrategy;
     array.capacity = 8;
@@ -581,7 +676,7 @@ START_TEST(test_ADynArray_insert_success_beyondEndIndex)
 END_TEST
 START_TEST(test_ADynArray_insert_success_bufferExpanded)
 {
-    struct ADynCharArray array = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
+    struct private_ACUtilsTest_ADynArray_CharArray array = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
     array.size = 5;
     array.growStrategy = private_ACUtilsTest_ADynArray_growStrategy;
     array.capacity = 5;
@@ -603,7 +698,7 @@ START_TEST(test_ADynArray_insert_success_bufferExpanded)
 END_TEST
 START_TEST(test_ADynArray_insert_success_negativeIndexGetsMaxIndex)
 {
-    struct ADynCharArray array = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
+    struct private_ACUtilsTest_ADynArray_CharArray array = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
     array.size = 5;
     array.growStrategy = private_ACUtilsTest_ADynArray_growStrategy;
     array.capacity = 8;
@@ -624,13 +719,14 @@ START_TEST(test_ADynArray_insert_success_negativeIndexGetsMaxIndex)
 END_TEST
 START_TEST(test_ADynArray_insert_failure_bufferExpansionFailed)
 {
-    struct ADynCharArray array = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
+    struct private_ACUtilsTest_ADynArray_CharArray array = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
     array.size = 5;
     array.growStrategy = private_ACUtilsTest_ADynArray_growStrategy;
     array.capacity = 5;
     private_ACUtilsTest_ADynArray_reallocFail = false;
     array.buffer = array.reallocator(NULL, array.capacity);
     memcpy(array.buffer, "0134", 5);
+    private_ACUtilsTest_ADynArray_reallocFailCounter = 0;
     private_ACUtilsTest_ADynArray_reallocFail = true;
     char c = '2';
     ck_assert_uint_eq(ADynArray_insert(&array, 2, c), false);
@@ -644,7 +740,7 @@ START_TEST(test_ADynArray_insert_failure_bufferExpansionFailed)
 END_TEST
 START_TEST(test_ADynArray_insert_failure_nullptr)
 {
-    struct ADynCharArray* arrayPtr = NULL;
+    struct private_ACUtilsTest_ADynArray_CharArray *arrayPtr = NULL;
     private_ACUtilsTest_ADynArray_reallocFail = false;
     private_ACUtilsTest_ADynArray_reallocCount = 0;
     char c = '0';
@@ -656,7 +752,7 @@ END_TEST
 
 START_TEST(test_ADynArray_insertArray_success_zeroIndex)
 {
-    struct ADynCharArray array = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
+    struct private_ACUtilsTest_ADynArray_CharArray array = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
     array.size = 5;
     array.growStrategy = private_ACUtilsTest_ADynArray_growStrategy;
     array.capacity = 8;
@@ -676,7 +772,7 @@ START_TEST(test_ADynArray_insertArray_success_zeroIndex)
 END_TEST
 START_TEST(test_ADynArray_insertArray_success_middleIndex)
 {
-    struct ADynCharArray array = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
+    struct private_ACUtilsTest_ADynArray_CharArray array = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
     array.size = 5;
     array.growStrategy = private_ACUtilsTest_ADynArray_growStrategy;
     array.capacity = 8;
@@ -696,7 +792,7 @@ START_TEST(test_ADynArray_insertArray_success_middleIndex)
 END_TEST
 START_TEST(test_ADynArray_insertArray_success_endIndex)
 {
-    struct ADynCharArray array = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
+    struct private_ACUtilsTest_ADynArray_CharArray array = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
     array.size = 5;
     array.growStrategy = private_ACUtilsTest_ADynArray_growStrategy;
     array.capacity = 8;
@@ -716,7 +812,7 @@ START_TEST(test_ADynArray_insertArray_success_endIndex)
 END_TEST
 START_TEST(test_ADynArray_insertArray_success_beyondEndIndex)
 {
-    struct ADynCharArray array = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
+    struct private_ACUtilsTest_ADynArray_CharArray array = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
     array.size = 5;
     array.growStrategy = private_ACUtilsTest_ADynArray_growStrategy;
     array.capacity = 8;
@@ -736,7 +832,7 @@ START_TEST(test_ADynArray_insertArray_success_beyondEndIndex)
 END_TEST
 START_TEST(test_ADynArray_insertArray_success_bufferExpanded)
 {
-    struct ADynCharArray array = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
+    struct private_ACUtilsTest_ADynArray_CharArray array = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
     array.size = 5;
     array.growStrategy = private_ACUtilsTest_ADynArray_growStrategy;
     array.capacity = 5;
@@ -756,8 +852,8 @@ START_TEST(test_ADynArray_insertArray_success_bufferExpanded)
 END_TEST
 START_TEST(test_ADynArray_insertArray_success_nullptrArray)
 {
-    struct ADynCharArray array = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
-    char* nullptrArray = NULL;
+    struct private_ACUtilsTest_ADynArray_CharArray array = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
+    char *nullptrArray = NULL;
     array.size = 5;
     array.growStrategy = private_ACUtilsTest_ADynArray_growStrategy;
     array.capacity = 5;
@@ -777,7 +873,7 @@ START_TEST(test_ADynArray_insertArray_success_nullptrArray)
 END_TEST
 START_TEST(test_ADynArray_insertArray_success_zeroArraySize)
 {
-    struct ADynCharArray array = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
+    struct private_ACUtilsTest_ADynArray_CharArray array = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
     array.size = 5;
     array.growStrategy = private_ACUtilsTest_ADynArray_growStrategy;
     array.capacity = 5;
@@ -797,7 +893,7 @@ START_TEST(test_ADynArray_insertArray_success_zeroArraySize)
 END_TEST
 START_TEST(test_ADynArray_insertArray_success_negativeIndexGetsMaxIndex)
 {
-    struct ADynCharArray array = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
+    struct private_ACUtilsTest_ADynArray_CharArray array = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
     array.size = 5;
     array.growStrategy = private_ACUtilsTest_ADynArray_growStrategy;
     array.capacity = 8;
@@ -817,13 +913,14 @@ START_TEST(test_ADynArray_insertArray_success_negativeIndexGetsMaxIndex)
 END_TEST
 START_TEST(test_ADynArray_insertArray_failure_bufferExpansionFailed)
 {
-    struct ADynCharArray array = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
+    struct private_ACUtilsTest_ADynArray_CharArray array = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
     array.size = 5;
     array.growStrategy = private_ACUtilsTest_ADynArray_growStrategy;
     array.capacity = 5;
     private_ACUtilsTest_ADynArray_reallocFail = false;
     array.buffer = array.reallocator(NULL, array.capacity);
     memcpy(array.buffer, "0156", 5);
+    private_ACUtilsTest_ADynArray_reallocFailCounter = 0;
     private_ACUtilsTest_ADynArray_reallocFail = true;
     ck_assert_uint_eq(ADynArray_insertArray(&array, 2, "234", 3), false);
     ck_assert_uint_eq(array.size, 5);
@@ -836,7 +933,7 @@ START_TEST(test_ADynArray_insertArray_failure_bufferExpansionFailed)
 END_TEST
 START_TEST(test_ADynArray_insertArray_failure_nullptrDestArray)
 {
-    struct ADynCharArray* arrayPtr = NULL;
+    struct private_ACUtilsTest_ADynArray_CharArray *arrayPtr = NULL;
     private_ACUtilsTest_ADynArray_reallocFail = false;
     private_ACUtilsTest_ADynArray_reallocCount = 0;
     ck_assert_uint_eq(ADynArray_insertArray(arrayPtr, 0, "012", 3), false);
@@ -847,8 +944,8 @@ END_TEST
 
 START_TEST(test_ADynArray_insertADynArray_success_zeroIndex)
 {
-    struct ADynCharArray destArray = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
-    struct ADynCharArray srcArray = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
+    struct private_ACUtilsTest_ADynArray_CharArray destArray = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
+    struct private_ACUtilsTest_ADynArray_CharArray srcArray = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
     destArray.size = 5;
     destArray.growStrategy = private_ACUtilsTest_ADynArray_growStrategy;
     destArray.capacity = 8;
@@ -879,8 +976,8 @@ START_TEST(test_ADynArray_insertADynArray_success_zeroIndex)
 END_TEST
 START_TEST(test_ADynArray_insertADynArray_success_middleIndex)
 {
-    struct ADynCharArray destArray = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
-    struct ADynCharArray srcArray = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
+    struct private_ACUtilsTest_ADynArray_CharArray destArray = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
+    struct private_ACUtilsTest_ADynArray_CharArray srcArray = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
     destArray.size = 5;
     destArray.growStrategy = private_ACUtilsTest_ADynArray_growStrategy;
     destArray.capacity = 8;
@@ -911,8 +1008,8 @@ START_TEST(test_ADynArray_insertADynArray_success_middleIndex)
 END_TEST
 START_TEST(test_ADynArray_insertADynArray_success_endIndex)
 {
-    struct ADynCharArray destArray = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
-    struct ADynCharArray srcArray = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
+    struct private_ACUtilsTest_ADynArray_CharArray destArray = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
+    struct private_ACUtilsTest_ADynArray_CharArray srcArray = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
     destArray.size = 5;
     destArray.growStrategy = private_ACUtilsTest_ADynArray_growStrategy;
     destArray.capacity = 8;
@@ -943,8 +1040,8 @@ START_TEST(test_ADynArray_insertADynArray_success_endIndex)
 END_TEST
 START_TEST(test_ADynArray_insertADynArray_success_beyondEndIndex)
 {
-    struct ADynCharArray destArray = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
-    struct ADynCharArray srcArray = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
+    struct private_ACUtilsTest_ADynArray_CharArray destArray = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
+    struct private_ACUtilsTest_ADynArray_CharArray srcArray = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
     destArray.size = 5;
     destArray.growStrategy = private_ACUtilsTest_ADynArray_growStrategy;
     destArray.capacity = 8;
@@ -975,8 +1072,8 @@ START_TEST(test_ADynArray_insertADynArray_success_beyondEndIndex)
 END_TEST
 START_TEST(test_ADynArray_insertADynArray_success_bufferExpanded)
 {
-    struct ADynCharArray destArray = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
-    struct ADynCharArray srcArray = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
+    struct private_ACUtilsTest_ADynArray_CharArray destArray = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
+    struct private_ACUtilsTest_ADynArray_CharArray srcArray = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
     destArray.size = 5;
     destArray.growStrategy = private_ACUtilsTest_ADynArray_growStrategy;
     destArray.capacity = 5;
@@ -1007,8 +1104,8 @@ START_TEST(test_ADynArray_insertADynArray_success_bufferExpanded)
 END_TEST
 START_TEST(test_ADynArray_insertADynArray_success_nullptrSrcArray)
 {
-    struct ADynCharArray destArray = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
-    struct ADynCharArray *srcArray = NULL;
+    struct private_ACUtilsTest_ADynArray_CharArray destArray = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
+    struct private_ACUtilsTest_ADynArray_CharArray *srcArray = NULL;
     destArray.size = 5;
     destArray.growStrategy = private_ACUtilsTest_ADynArray_growStrategy;
     destArray.capacity = 5;
@@ -1028,8 +1125,8 @@ START_TEST(test_ADynArray_insertADynArray_success_nullptrSrcArray)
 END_TEST
 START_TEST(test_ADynArray_insertADynArray_success_zeroSizeSrcArray)
 {
-    struct ADynCharArray destArray = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
-    struct ADynCharArray srcArray = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
+    struct private_ACUtilsTest_ADynArray_CharArray destArray = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
+    struct private_ACUtilsTest_ADynArray_CharArray srcArray = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
     destArray.size = 5;
     destArray.growStrategy = private_ACUtilsTest_ADynArray_growStrategy;
     destArray.capacity = 8;
@@ -1058,8 +1155,8 @@ START_TEST(test_ADynArray_insertADynArray_success_zeroSizeSrcArray)
 END_TEST
 START_TEST(test_ADynArray_insertADynArray_success_negativeIndexGetsMaxIndex)
 {
-    struct ADynCharArray destArray = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
-    struct ADynCharArray srcArray = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
+    struct private_ACUtilsTest_ADynArray_CharArray destArray = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
+    struct private_ACUtilsTest_ADynArray_CharArray srcArray = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
     destArray.size = 5;
     destArray.growStrategy = private_ACUtilsTest_ADynArray_growStrategy;
     destArray.capacity = 8;
@@ -1090,8 +1187,8 @@ START_TEST(test_ADynArray_insertADynArray_success_negativeIndexGetsMaxIndex)
 END_TEST
 START_TEST(test_ADynArray_insertADynArray_failure_bufferExpansionFailed)
 {
-    struct ADynCharArray destArray = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
-    struct ADynCharArray srcArray = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
+    struct private_ACUtilsTest_ADynArray_CharArray destArray = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
+    struct private_ACUtilsTest_ADynArray_CharArray srcArray = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
     destArray.size = 5;
     destArray.growStrategy = private_ACUtilsTest_ADynArray_growStrategy;
     destArray.capacity = 5;
@@ -1103,6 +1200,7 @@ START_TEST(test_ADynArray_insertADynArray_failure_bufferExpansionFailed)
     srcArray.capacity = 8;
     srcArray.buffer = srcArray.reallocator(NULL, srcArray.capacity);
     memcpy(srcArray.buffer, "234", 4);
+    private_ACUtilsTest_ADynArray_reallocFailCounter = 0;
     private_ACUtilsTest_ADynArray_reallocFail = true;
     ck_assert_uint_eq(ADynArray_insertADynArray(&destArray, 2, &srcArray), false);
     ck_assert_uint_eq(destArray.size, 5);
@@ -1121,8 +1219,8 @@ START_TEST(test_ADynArray_insertADynArray_failure_bufferExpansionFailed)
 END_TEST
 START_TEST(test_ADynArray_insertADynArray_failure_nullptrDestArray)
 {
-    struct ADynCharArray srcArray = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
-    struct ADynCharArray *destArrayPtr = NULL;
+    struct private_ACUtilsTest_ADynArray_CharArray srcArray = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
+    struct private_ACUtilsTest_ADynArray_CharArray *destArrayPtr = NULL;
     srcArray.size = 3;
     srcArray.growStrategy = private_ACUtilsTest_ADynArray_growStrategy;
     srcArray.capacity = 8;
@@ -1144,7 +1242,7 @@ END_TEST
 
 START_TEST(test_ADynArray_append_success_enoughCapacity)
 {
-    struct ADynCharArray array = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
+    struct private_ACUtilsTest_ADynArray_CharArray array = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
     array.size = 5;
     array.growStrategy = private_ACUtilsTest_ADynArray_growStrategy;
     array.capacity = 8;
@@ -1166,7 +1264,7 @@ START_TEST(test_ADynArray_append_success_enoughCapacity)
 END_TEST
 START_TEST(test_ADynArray_append_success_notEnoughCapacity)
 {
-    struct ADynCharArray array = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
+    struct private_ACUtilsTest_ADynArray_CharArray array = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
     array.size = 5;
     array.growStrategy = private_ACUtilsTest_ADynArray_growStrategy;
     array.capacity = 5;
@@ -1188,13 +1286,14 @@ START_TEST(test_ADynArray_append_success_notEnoughCapacity)
 END_TEST
 START_TEST(test_ADynArray_append_failure_bufferExpansionFailed)
 {
-    struct ADynCharArray array = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
+    struct private_ACUtilsTest_ADynArray_CharArray array = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
     array.size = 5;
     array.growStrategy = private_ACUtilsTest_ADynArray_growStrategy;
     array.capacity = 5;
     private_ACUtilsTest_ADynArray_reallocFail = false;
     array.buffer = array.reallocator(NULL, array.capacity + 1);
     memcpy(array.buffer, "01234", 6);
+    private_ACUtilsTest_ADynArray_reallocFailCounter = 0;
     private_ACUtilsTest_ADynArray_reallocFail = true;
     char c = '\0';
     ck_assert_uint_eq(ADynArray_append(&array, c), false);
@@ -1208,7 +1307,7 @@ START_TEST(test_ADynArray_append_failure_bufferExpansionFailed)
 END_TEST
 START_TEST(test_ADynArray_append_failure_nullptr)
 {
-    struct ADynCharArray* arrayPtr = NULL;
+    struct private_ACUtilsTest_ADynArray_CharArray *arrayPtr = NULL;
     private_ACUtilsTest_ADynArray_reallocFail = false;
     private_ACUtilsTest_ADynArray_reallocCount = 0;
     char c = '\0';
@@ -1220,7 +1319,7 @@ END_TEST
 
 START_TEST(test_ADynArray_appendArray_success_enoughCapacity)
 {
-    struct ADynCharArray array = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
+    struct private_ACUtilsTest_ADynArray_CharArray array = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
     array.size = 5;
     array.growStrategy = private_ACUtilsTest_ADynArray_growStrategy;
     array.capacity = 8;
@@ -1240,7 +1339,7 @@ START_TEST(test_ADynArray_appendArray_success_enoughCapacity)
 END_TEST
 START_TEST(test_ADynArray_appendArray_success_notEnoughCapacity)
 {
-    struct ADynCharArray array = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
+    struct private_ACUtilsTest_ADynArray_CharArray array = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
     array.size = 5;
     array.growStrategy = private_ACUtilsTest_ADynArray_growStrategy;
     array.capacity = 5;
@@ -1260,8 +1359,8 @@ START_TEST(test_ADynArray_appendArray_success_notEnoughCapacity)
 END_TEST
 START_TEST(test_ADynArray_appendArray_success_nullptrArray)
 {
-    struct ADynCharArray array = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
-    char* nullptrArray = NULL;
+    struct private_ACUtilsTest_ADynArray_CharArray array = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
+    char *nullptrArray = NULL;
     array.size = 5;
     array.growStrategy = private_ACUtilsTest_ADynArray_growStrategy;
     array.capacity = 5;
@@ -1281,7 +1380,7 @@ START_TEST(test_ADynArray_appendArray_success_nullptrArray)
 END_TEST
 START_TEST(test_ADynArray_appendArray_success_zeroArraySize)
 {
-    struct ADynCharArray array = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
+    struct private_ACUtilsTest_ADynArray_CharArray array = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
     array.size = 5;
     array.growStrategy = private_ACUtilsTest_ADynArray_growStrategy;
     array.capacity = 5;
@@ -1301,13 +1400,14 @@ START_TEST(test_ADynArray_appendArray_success_zeroArraySize)
 END_TEST
 START_TEST(test_ADynArray_appendArray_failure_bufferExpansionFailed)
 {
-    struct ADynCharArray array = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
+    struct private_ACUtilsTest_ADynArray_CharArray array = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
     array.size = 5;
     array.growStrategy = private_ACUtilsTest_ADynArray_growStrategy;
     array.capacity = 5;
     private_ACUtilsTest_ADynArray_reallocFail = false;
     array.buffer = array.reallocator(NULL, array.capacity);
     memcpy(array.buffer, "0123", 5);
+    private_ACUtilsTest_ADynArray_reallocFailCounter = 0;
     private_ACUtilsTest_ADynArray_reallocFail = true;
     ck_assert_uint_eq(ADynArray_insertArray(&array, 2, "45\0", 3), false);
     ck_assert_uint_eq(array.size, 5);
@@ -1320,7 +1420,7 @@ START_TEST(test_ADynArray_appendArray_failure_bufferExpansionFailed)
 END_TEST
 START_TEST(test_ADynArray_appendArray_failure_nullptrDestArray)
 {
-    struct ADynCharArray* arrayPtr = NULL;
+    struct private_ACUtilsTest_ADynArray_CharArray *arrayPtr = NULL;
     private_ACUtilsTest_ADynArray_reallocFail = false;
     private_ACUtilsTest_ADynArray_reallocCount = 0;
     ck_assert_uint_eq(ADynArray_insertArray(arrayPtr, 0, "012", 3), false);
@@ -1331,8 +1431,8 @@ END_TEST
 
 START_TEST(test_ADynArray_appendADynArray_success_enoughCapacity)
 {
-    struct ADynCharArray destArray = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
-    struct ADynCharArray srcArray = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
+    struct private_ACUtilsTest_ADynArray_CharArray destArray = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
+    struct private_ACUtilsTest_ADynArray_CharArray srcArray = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
     destArray.size = 5;
     destArray.growStrategy = private_ACUtilsTest_ADynArray_growStrategy;
     destArray.capacity = 8;
@@ -1363,8 +1463,8 @@ START_TEST(test_ADynArray_appendADynArray_success_enoughCapacity)
 END_TEST
 START_TEST(test_ADynArray_appendADynArray_success_notEnoughCapacity)
 {
-    struct ADynCharArray destArray = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
-    struct ADynCharArray srcArray = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
+    struct private_ACUtilsTest_ADynArray_CharArray destArray = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
+    struct private_ACUtilsTest_ADynArray_CharArray srcArray = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
     destArray.size = 5;
     destArray.growStrategy = private_ACUtilsTest_ADynArray_growStrategy;
     destArray.capacity = 5;
@@ -1395,8 +1495,8 @@ START_TEST(test_ADynArray_appendADynArray_success_notEnoughCapacity)
 END_TEST
 START_TEST(test_ADynArray_appendADynArray_success_nullptrSrcArray)
 {
-    struct ADynCharArray destArray = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
-    struct ADynCharArray *srcArray = NULL;
+    struct private_ACUtilsTest_ADynArray_CharArray destArray = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
+    struct private_ACUtilsTest_ADynArray_CharArray *srcArray = NULL;
     destArray.size = 5;
     destArray.growStrategy = private_ACUtilsTest_ADynArray_growStrategy;
     destArray.capacity = 5;
@@ -1416,8 +1516,8 @@ START_TEST(test_ADynArray_appendADynArray_success_nullptrSrcArray)
 END_TEST
 START_TEST(test_ADynArray_appendADynArray_success_zeroSizeSrcArray)
 {
-    struct ADynCharArray destArray = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
-    struct ADynCharArray srcArray = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
+    struct private_ACUtilsTest_ADynArray_CharArray destArray = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
+    struct private_ACUtilsTest_ADynArray_CharArray srcArray = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
     destArray.size = 5;
     destArray.growStrategy = private_ACUtilsTest_ADynArray_growStrategy;
     destArray.capacity = 8;
@@ -1446,8 +1546,8 @@ START_TEST(test_ADynArray_appendADynArray_success_zeroSizeSrcArray)
 END_TEST
 START_TEST(test_ADynArray_appendADynArray_failure_bufferExpansionFailed)
 {
-    struct ADynCharArray destArray = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
-    struct ADynCharArray srcArray = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
+    struct private_ACUtilsTest_ADynArray_CharArray destArray = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
+    struct private_ACUtilsTest_ADynArray_CharArray srcArray = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
     destArray.size = 5;
     destArray.growStrategy = private_ACUtilsTest_ADynArray_growStrategy;
     destArray.capacity = 5;
@@ -1459,6 +1559,7 @@ START_TEST(test_ADynArray_appendADynArray_failure_bufferExpansionFailed)
     srcArray.capacity = 8;
     srcArray.buffer = srcArray.reallocator(NULL, srcArray.capacity);
     memcpy(srcArray.buffer, "234", 4);
+    private_ACUtilsTest_ADynArray_reallocFailCounter = 0;
     private_ACUtilsTest_ADynArray_reallocFail = true;
     ck_assert_uint_eq(ADynArray_appendADynArray(&destArray, &srcArray), false);
     ck_assert_uint_eq(destArray.size, 5);
@@ -1477,8 +1578,8 @@ START_TEST(test_ADynArray_appendADynArray_failure_bufferExpansionFailed)
 END_TEST
 START_TEST(test_ADynArray_appendADynArray_failure_nullptrDestArray)
 {
-    struct ADynCharArray srcArray = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
-    struct ADynCharArray *destArrayPtr = NULL;
+    struct private_ACUtilsTest_ADynArray_CharArray srcArray = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
+    struct private_ACUtilsTest_ADynArray_CharArray *destArrayPtr = NULL;
     srcArray.size = 3;
     srcArray.growStrategy = private_ACUtilsTest_ADynArray_growStrategy;
     srcArray.capacity = 8;
@@ -1500,7 +1601,7 @@ END_TEST
 
 START_TEST(test_ADynArray_set_success_indexInBounds)
 {
-    struct ADynCharArray array = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
+    struct private_ACUtilsTest_ADynArray_CharArray array = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
     array.size = 4;
     array.growStrategy = private_ACUtilsTest_ADynArray_growStrategy;
     array.capacity = 4;
@@ -1537,13 +1638,14 @@ START_TEST(test_ADynArray_set_success_indexInBounds)
 END_TEST
 START_TEST(test_ADynArray_set_success_indexBeyondSize)
 {
-    struct ADynCharArray array = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
+    struct private_ACUtilsTest_ADynArray_CharArray array = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
     array.size = 3;
     array.growStrategy = private_ACUtilsTest_ADynArray_growStrategy;
     array.capacity = 4;
     private_ACUtilsTest_ADynArray_reallocFail = false;
     array.buffer = array.reallocator(NULL, array.capacity + 1);
     memcpy(array.buffer, "012\0\0", 5);
+    private_ACUtilsTest_ADynArray_reallocFailCounter = 0;
     private_ACUtilsTest_ADynArray_reallocFail = true;
     private_ACUtilsTest_ADynArray_reallocCount = 0;
     char c = '3';
@@ -1559,7 +1661,7 @@ START_TEST(test_ADynArray_set_success_indexBeyondSize)
 END_TEST
 START_TEST(test_ADynArray_set_success_indexBeyondSize_bufferExpanded)
 {
-    struct ADynCharArray array = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
+    struct private_ACUtilsTest_ADynArray_CharArray array = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
     array.size = 3;
     array.growStrategy = private_ACUtilsTest_ADynArray_growStrategy;
     array.capacity = 3;
@@ -1580,13 +1682,14 @@ START_TEST(test_ADynArray_set_success_indexBeyondSize_bufferExpanded)
 END_TEST
 START_TEST(test_ADynArray_set_failure_indexBeyondSize_bufferExpansionFailed)
 {
-    struct ADynCharArray array = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
+    struct private_ACUtilsTest_ADynArray_CharArray array = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
     array.size = 3;
     array.growStrategy = private_ACUtilsTest_ADynArray_growStrategy;
     array.capacity = 3;
     private_ACUtilsTest_ADynArray_reallocFail = false;
     array.buffer = array.reallocator(NULL, array.capacity + 1);
     memcpy(array.buffer, "012", 4);
+    private_ACUtilsTest_ADynArray_reallocFailCounter = 0;
     private_ACUtilsTest_ADynArray_reallocFail = true;
     char c = '3';
     ck_assert_uint_eq(ADynArray_set(&array, 3, c), false);
@@ -1600,7 +1703,7 @@ START_TEST(test_ADynArray_set_failure_indexBeyondSize_bufferExpansionFailed)
 END_TEST
 START_TEST(test_ADynArray_set_failure_nullptr)
 {
-    struct ADynCharArray *arrayPtr = NULL;
+    struct private_ACUtilsTest_ADynArray_CharArray *arrayPtr = NULL;
     private_ACUtilsTest_ADynArray_reallocFail = false;
     private_ACUtilsTest_ADynArray_reallocCount = 0;
     char c = '0';
@@ -1612,7 +1715,7 @@ END_TEST
 
 START_TEST(test_ADynArray_setRange_success_indexAndRangeInBounds)
 {
-    struct ADynCharArray array = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
+    struct private_ACUtilsTest_ADynArray_CharArray array = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
     array.size = 4;
     array.growStrategy = private_ACUtilsTest_ADynArray_growStrategy;
     array.capacity = 4;
@@ -1649,7 +1752,7 @@ START_TEST(test_ADynArray_setRange_success_indexAndRangeInBounds)
 END_TEST
 START_TEST(test_ADynArray_setRange_success_indexInBoundsRangeBeyondSize)
 {
-    struct ADynCharArray array = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
+    struct private_ACUtilsTest_ADynArray_CharArray array = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
     array.size = 3;
     array.growStrategy = private_ACUtilsTest_ADynArray_growStrategy;
     array.capacity = 8;
@@ -1680,7 +1783,7 @@ START_TEST(test_ADynArray_setRange_success_indexInBoundsRangeBeyondSize)
 END_TEST
 START_TEST(test_ADynArray_setRange_success_indexInBoundsRangeBeyondSize_bufferExpanded)
 {
-    struct ADynCharArray array = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
+    struct private_ACUtilsTest_ADynArray_CharArray array = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
     array.size = 3;
     array.growStrategy = private_ACUtilsTest_ADynArray_growStrategy;
     array.capacity = 3;
@@ -1711,13 +1814,14 @@ START_TEST(test_ADynArray_setRange_success_indexInBoundsRangeBeyondSize_bufferEx
 END_TEST
 START_TEST(test_ADynArray_setRange_success_indexAndRangeBeyondSize)
 {
-    struct ADynCharArray array = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
+    struct private_ACUtilsTest_ADynArray_CharArray array = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
     array.size = 3;
     array.growStrategy = private_ACUtilsTest_ADynArray_growStrategy;
     array.capacity = 16;
     private_ACUtilsTest_ADynArray_reallocFail = false;
     array.buffer = array.reallocator(NULL, array.capacity);
     memcpy(array.buffer, "012", 3);
+    private_ACUtilsTest_ADynArray_reallocFailCounter = 0;
     private_ACUtilsTest_ADynArray_reallocFail = true;
     private_ACUtilsTest_ADynArray_reallocCount = 0;
     char c = '3';
@@ -1743,7 +1847,7 @@ START_TEST(test_ADynArray_setRange_success_indexAndRangeBeyondSize)
 END_TEST
 START_TEST(test_ADynArray_setRange_success_indexAndRangeBeyondSize_bufferExpanded)
 {
-    struct ADynCharArray array = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
+    struct private_ACUtilsTest_ADynArray_CharArray array = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
     array.size = 3;
     array.growStrategy = private_ACUtilsTest_ADynArray_growStrategy;
     array.capacity = 3;
@@ -1783,13 +1887,14 @@ START_TEST(test_ADynArray_setRange_success_indexAndRangeBeyondSize_bufferExpande
 END_TEST
 START_TEST(test_ADynArray_setRange_failure_indexInBoundsRangeBeyondSize_bufferExpansionFailed)
 {
-    struct ADynCharArray array = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
+    struct private_ACUtilsTest_ADynArray_CharArray array = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
     array.size = 3;
     array.growStrategy = private_ACUtilsTest_ADynArray_growStrategy;
     array.capacity = 4;
     private_ACUtilsTest_ADynArray_reallocFail = false;
     array.buffer = array.reallocator(NULL, array.capacity);
     memcpy(array.buffer, "012", 3);
+    private_ACUtilsTest_ADynArray_reallocFailCounter = 0;
     private_ACUtilsTest_ADynArray_reallocFail = true;
     private_ACUtilsTest_ADynArray_reallocCount = 0;
     char c = '4';
@@ -1806,13 +1911,14 @@ START_TEST(test_ADynArray_setRange_failure_indexInBoundsRangeBeyondSize_bufferEx
 END_TEST
 START_TEST(test_ADynArray_setRange_failure_indexAndRangeBeyondSize_bufferExpansionFailed)
 {
-    struct ADynCharArray array = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
+    struct private_ACUtilsTest_ADynArray_CharArray array = {.reallocator = private_ACUtilsTest_ADynArray_realloc, .deallocator = private_ACUtilsTest_ADynArray_free};
     array.size = 3;
     array.growStrategy = private_ACUtilsTest_ADynArray_growStrategy;
     array.capacity = 4;
     private_ACUtilsTest_ADynArray_reallocFail = false;
     array.buffer = array.reallocator(NULL, array.capacity);
     memcpy(array.buffer, "012", 3);
+    private_ACUtilsTest_ADynArray_reallocFailCounter = 0;
     private_ACUtilsTest_ADynArray_reallocFail = true;
     private_ACUtilsTest_ADynArray_reallocCount = 0;
     char c = '4';
@@ -1829,7 +1935,7 @@ START_TEST(test_ADynArray_setRange_failure_indexAndRangeBeyondSize_bufferExpansi
 END_TEST
 START_TEST(test_ADynArray_setRange_failure_nullptr)
 {
-    struct ADynCharArray *arrayPtr = NULL;
+    struct private_ACUtilsTest_ADynArray_CharArray *arrayPtr = NULL;
     private_ACUtilsTest_ADynArray_reallocFail = false;
     private_ACUtilsTest_ADynArray_reallocCount = 0;
     char c = '0';
@@ -1842,7 +1948,7 @@ END_TEST
 START_TEST(test_ADynArray_mixedWithStruct)
 {
     size_t i;
-    struct ADynTestPointArray *tmpDynArray, *dynArray;
+    struct private_ACUtilsTest_ADynArray_PointArray *tmpDynArray, *dynArray;
     struct private_ACUtilsTest_ADynArray_PointStruct *tmpArray = (struct private_ACUtilsTest_ADynArray_PointStruct*) malloc(9 * sizeof(struct private_ACUtilsTest_ADynArray_PointStruct));
     tmpArray[0] = (struct private_ACUtilsTest_ADynArray_PointStruct) {.x = 0.1, .y = 0.2};
     tmpArray[1] = (struct private_ACUtilsTest_ADynArray_PointStruct) {.x = 1.1, .y = 1.2};
@@ -1853,13 +1959,13 @@ START_TEST(test_ADynArray_mixedWithStruct)
     tmpArray[6] = (struct private_ACUtilsTest_ADynArray_PointStruct) {.x = 6.1, .y = 6.2};
     tmpArray[7] = (struct private_ACUtilsTest_ADynArray_PointStruct) {.x = 7.1, .y = 7.2};
     tmpArray[8] = (struct private_ACUtilsTest_ADynArray_PointStruct) {.x = 8.1, .y = 8.2};
-    dynArray = ADynArray_constructWithAllocator(struct ADynTestPointArray, private_ACUtilsTest_ADynArray_realloc, private_ACUtilsTest_ADynArray_free);
+    dynArray = ADynArray_constructWithAllocator(struct private_ACUtilsTest_ADynArray_PointArray, private_ACUtilsTest_ADynArray_realloc, private_ACUtilsTest_ADynArray_free);
     dynArray->growStrategy = private_ACUtilsTest_ADynArray_growStrategy;
     ck_assert_uint_eq(ADynArray_size(dynArray), 0);
     ck_assert_uint_eq(ADynArray_shrinkToFit(dynArray), true);
     ck_assert_uint_eq(ADynArray_size(dynArray), 0);
     ck_assert_uint_eq(ADynArray_capacity(dynArray), 8);
-    tmpDynArray = ADynArray_constructWithAllocator(struct ADynTestPointArray, private_ACUtilsTest_ADynArray_realloc, private_ACUtilsTest_ADynArray_free);
+    tmpDynArray = ADynArray_constructWithAllocator(struct private_ACUtilsTest_ADynArray_PointArray, private_ACUtilsTest_ADynArray_realloc, private_ACUtilsTest_ADynArray_free);
     ADynArray_appendArray(tmpDynArray, tmpArray + 6, 3);
     ck_assert_uint_eq(ADynArray_size(tmpDynArray), 3);
     ck_assert_uint_eq(ADynArray_capacity(tmpDynArray), 8);
@@ -1900,19 +2006,19 @@ END_TEST
 
 
 
-Suite* test_suite_dynarray()
+Suite* private_ACUtilsTest_ADynArray_getTestSuite(void)
 {
     Suite *s;
     TCase *test_case_ADynArray_construct_destruct, *test_case_ADynArray_setGrowStrategy, *test_case_ADynArray_size,
-        *test_case_ADynArray_capacity, *test_case_ADynArray_reserve, *test_case_ADynArray_shrinkToFit,
-        *test_case_ADynArray_clear, *test_case_ADynArray_remove, *test_case_ADynArray_insert,
-        *test_case_ADynArray_insertArray, *test_case_ADynArray_insertADynArray, *test_case_ADynArray_add,
-        *test_case_ADynArray_addArray, *test_case_ADynArray_addADynArray, *test_case_ADynArray_set,
-        *test_case_ADynArray_setRange, *test_case_ADynArray_mixed;
+        *test_case_ADynArray_capacity, *test_case_ADynArray_buffer, *test_case_ADynArray_reserve,
+        *test_case_ADynArray_shrinkToFit, *test_case_ADynArray_clear, *test_case_ADynArray_remove,
+        *test_case_ADynArray_insert, *test_case_ADynArray_insertArray, *test_case_ADynArray_insertADynArray,
+        *test_case_ADynArray_add, *test_case_ADynArray_addArray, *test_case_ADynArray_addADynArray,
+        *test_case_ADynArray_set, *test_case_ADynArray_setRange, *test_case_ADynArray_mixed;
 
-    s = suite_create("Dynamic Array Test Suite");
+    s = suite_create("ADynArray Test Suite");
 
-    test_case_ADynArray_construct_destruct = tcase_create("Dynamic Array Test Case: ADynArray_construct / ADynArray_destruct");
+    test_case_ADynArray_construct_destruct = tcase_create("ADynArray Test Case: ADynArray_construct / ADynArray_destruct");
     tcase_add_test(test_case_ADynArray_construct_destruct, test_ADynArray_construct_destruct_valid);
     tcase_add_test(test_case_ADynArray_construct_destruct, test_ADynArray_construct_destruct_withAllocator_valid);
     tcase_add_test(test_case_ADynArray_construct_destruct, test_ADynArray_construct_destruct_withAllocator_invalid);
@@ -1920,21 +2026,26 @@ Suite* test_suite_dynarray()
     tcase_add_test(test_case_ADynArray_construct_destruct, test_ADynArray_construct_destruct_nullptr);
     suite_add_tcase(s, test_case_ADynArray_construct_destruct);
 
-    test_case_ADynArray_setGrowStrategy = tcase_create("Dynamic Array Test Case: ADynArray_setGrowStrategy");
+    test_case_ADynArray_setGrowStrategy = tcase_create("ADynArray Test Case: ADynArray_setGrowStrategy");
     tcase_add_test(test_case_ADynArray_setGrowStrategy, test_ADynArray_setGrowStrategy);
     suite_add_tcase(s, test_case_ADynArray_setGrowStrategy);
 
-    test_case_ADynArray_size = tcase_create("Dynamic Array Test Case: ADynArray_size");
+    test_case_ADynArray_size = tcase_create("ADynArray Test Case: ADynArray_size");
     tcase_add_test(test_case_ADynArray_size, test_ADynArray_size_valid);
     tcase_add_test(test_case_ADynArray_size, test_ADynArray_size_nullptr);
     suite_add_tcase(s, test_case_ADynArray_size);
 
-    test_case_ADynArray_capacity = tcase_create("Dynamic Array Test Case: ADynArray_capacity");
+    test_case_ADynArray_capacity = tcase_create("ADynArray Test Case: ADynArray_capacity");
     tcase_add_test(test_case_ADynArray_capacity, test_ADynArray_capacity_valid);
     tcase_add_test(test_case_ADynArray_capacity, test_ADynArray_capacity_nullptr);
     suite_add_tcase(s, test_case_ADynArray_capacity);
 
-    test_case_ADynArray_reserve = tcase_create("Dynamic Array Test Case: ADynArray_reserve");
+    test_case_ADynArray_buffer = tcase_create("ADynArray Test Case: ADynArray_buffer");
+    tcase_add_test(test_case_ADynArray_buffer, test_ADynArray_buffer_valid);
+    tcase_add_test(test_case_ADynArray_buffer, test_ADynArray_buffer_nullptr);
+    suite_add_tcase(s, test_case_ADynArray_buffer);
+
+    test_case_ADynArray_reserve = tcase_create("ADynArray Test Case: ADynArray_reserve");
     tcase_add_test(test_case_ADynArray_reserve, test_ADynArray_reserve_success_enoughCapacityBufferNotNull);
     tcase_add_test(test_case_ADynArray_reserve, test_ADynArray_reserve_success_enoughCapacityBufferNull);
     tcase_add_test(test_case_ADynArray_reserve, test_ADynArray_reserve_success_notEnoughCapacity);
@@ -1944,7 +2055,7 @@ Suite* test_suite_dynarray()
     tcase_add_test(test_case_ADynArray_reserve, test_ADynArray_reserve_failure_nullptr);
     suite_add_tcase(s, test_case_ADynArray_reserve);
 
-    test_case_ADynArray_shrinkToFit = tcase_create("Dynamic Array Test Case: ADynArray_shrinkToFit");
+    test_case_ADynArray_shrinkToFit = tcase_create("ADynArray Test Case: ADynArray_shrinkToFit");
     tcase_add_test(test_case_ADynArray_shrinkToFit, test_ADynArray_shrinkToFit_success_hasLeastCapacityBufferNotNull);
     tcase_add_test(test_case_ADynArray_shrinkToFit, test_ADynArray_shrinkToFit_success_hasLeastCapacityBufferNull);
     tcase_add_test(test_case_ADynArray_shrinkToFit, test_ADynArray_shrinkToFit_success_hasNotLeastCapacity);
@@ -1953,12 +2064,12 @@ Suite* test_suite_dynarray()
     tcase_add_test(test_case_ADynArray_shrinkToFit, test_ADynArray_shrinkToFit_failure_nullptr);
     suite_add_tcase(s, test_case_ADynArray_shrinkToFit);
 
-    test_case_ADynArray_clear = tcase_create("Dynamic Array Test Case: ADynArray_clear");
+    test_case_ADynArray_clear = tcase_create("ADynArray Test Case: ADynArray_clear");
     tcase_add_test(test_case_ADynArray_clear, test_ADynArray_clear);
     tcase_add_test(test_case_ADynArray_clear, test_ADynArray_clear_nullptr);
     suite_add_tcase(s, test_case_ADynArray_clear);
 
-    test_case_ADynArray_remove = tcase_create("Dynamic Array Test Case: ADynArray_remove");
+    test_case_ADynArray_remove = tcase_create("ADynArray Test Case: ADynArray_remove");
     tcase_add_test(test_case_ADynArray_remove, test_ADynArray_remove_indexRangeInBounds);
     tcase_add_test(test_case_ADynArray_remove, test_ADynArray_remove_rangeBeyondBounds);
     tcase_add_test(test_case_ADynArray_remove, test_ADynArray_remove_zeroRange);
@@ -1966,7 +2077,7 @@ Suite* test_suite_dynarray()
     tcase_add_test(test_case_ADynArray_remove, test_ADynArray_remove_nullptr);
     suite_add_tcase(s, test_case_ADynArray_remove);
 
-    test_case_ADynArray_insert = tcase_create("Dynamic Array Test Case: ADynArray_insert");
+    test_case_ADynArray_insert = tcase_create("ADynArray Test Case: ADynArray_insert");
     tcase_add_test(test_case_ADynArray_insert, test_ADynArray_insert_success_zeroIndex);
     tcase_add_test(test_case_ADynArray_insert, test_ADynArray_insert_success_middleIndex);
     tcase_add_test(test_case_ADynArray_insert, test_ADynArray_insert_success_endIndex);
@@ -1977,7 +2088,7 @@ Suite* test_suite_dynarray()
     tcase_add_test(test_case_ADynArray_insert, test_ADynArray_insert_failure_nullptr);
     suite_add_tcase(s, test_case_ADynArray_insert);
 
-    test_case_ADynArray_insertArray = tcase_create("Dynamic Array Test Case: ADynArray_insertArray");
+    test_case_ADynArray_insertArray = tcase_create("ADynArray Test Case: ADynArray_insertArray");
     tcase_add_test(test_case_ADynArray_insertArray, test_ADynArray_insertArray_success_zeroIndex);
     tcase_add_test(test_case_ADynArray_insertArray, test_ADynArray_insertArray_success_middleIndex);
     tcase_add_test(test_case_ADynArray_insertArray, test_ADynArray_insertArray_success_endIndex);
@@ -1990,7 +2101,7 @@ Suite* test_suite_dynarray()
     tcase_add_test(test_case_ADynArray_insertArray, test_ADynArray_insertArray_failure_nullptrDestArray);
     suite_add_tcase(s, test_case_ADynArray_insertArray);
 
-    test_case_ADynArray_insertADynArray = tcase_create("Dynamic Array Test Case: ADynArray_insertADynArray");
+    test_case_ADynArray_insertADynArray = tcase_create("ADynArray Test Case: ADynArray_insertADynArray");
     tcase_add_test(test_case_ADynArray_insertADynArray, test_ADynArray_insertADynArray_success_zeroIndex);
     tcase_add_test(test_case_ADynArray_insertADynArray, test_ADynArray_insertADynArray_success_middleIndex);
     tcase_add_test(test_case_ADynArray_insertADynArray, test_ADynArray_insertADynArray_success_endIndex);
@@ -2003,14 +2114,14 @@ Suite* test_suite_dynarray()
     tcase_add_test(test_case_ADynArray_insertADynArray, test_ADynArray_insertADynArray_failure_nullptrDestArray);
     suite_add_tcase(s, test_case_ADynArray_insertADynArray);
 
-    test_case_ADynArray_add = tcase_create("Dynamic Array Test Case: ADynArray_append");
+    test_case_ADynArray_add = tcase_create("ADynArray Test Case: ADynArray_append");
     tcase_add_test(test_case_ADynArray_add, test_ADynArray_append_success_enoughCapacity);
     tcase_add_test(test_case_ADynArray_add, test_ADynArray_append_success_notEnoughCapacity);
     tcase_add_test(test_case_ADynArray_add, test_ADynArray_append_failure_bufferExpansionFailed);
     tcase_add_test(test_case_ADynArray_add, test_ADynArray_append_failure_nullptr);
     suite_add_tcase(s, test_case_ADynArray_add);
 
-    test_case_ADynArray_addArray = tcase_create("Dynamic Array Test Case: ADynArray_appendArray");
+    test_case_ADynArray_addArray = tcase_create("ADynArray Test Case: ADynArray_appendArray");
     tcase_add_test(test_case_ADynArray_addArray, test_ADynArray_appendArray_success_enoughCapacity);
     tcase_add_test(test_case_ADynArray_addArray, test_ADynArray_appendArray_success_notEnoughCapacity);
     tcase_add_test(test_case_ADynArray_addArray, test_ADynArray_appendArray_success_nullptrArray);
@@ -2019,7 +2130,7 @@ Suite* test_suite_dynarray()
     tcase_add_test(test_case_ADynArray_addArray, test_ADynArray_appendArray_failure_nullptrDestArray);
     suite_add_tcase(s, test_case_ADynArray_addArray);
 
-    test_case_ADynArray_addADynArray = tcase_create("Dynamic Array Test Case: ADynArray_appendADynArray");
+    test_case_ADynArray_addADynArray = tcase_create("ADynArray Test Case: ADynArray_appendADynArray");
     tcase_add_test(test_case_ADynArray_addADynArray, test_ADynArray_appendADynArray_success_enoughCapacity);
     tcase_add_test(test_case_ADynArray_addADynArray, test_ADynArray_appendADynArray_success_notEnoughCapacity);
     tcase_add_test(test_case_ADynArray_addADynArray, test_ADynArray_appendADynArray_success_nullptrSrcArray);
@@ -2028,7 +2139,7 @@ Suite* test_suite_dynarray()
     tcase_add_test(test_case_ADynArray_addADynArray, test_ADynArray_appendADynArray_failure_nullptrDestArray);
     suite_add_tcase(s, test_case_ADynArray_addADynArray);
 
-    test_case_ADynArray_set = tcase_create("Dynamic Array Test Case: ADynArray_set");
+    test_case_ADynArray_set = tcase_create("ADynArray Test Case: ADynArray_set");
     tcase_add_test(test_case_ADynArray_set, test_ADynArray_set_success_indexInBounds);
     tcase_add_test(test_case_ADynArray_set, test_ADynArray_set_success_indexBeyondSize);
     tcase_add_test(test_case_ADynArray_set, test_ADynArray_set_success_indexBeyondSize_bufferExpanded);
@@ -2036,7 +2147,7 @@ Suite* test_suite_dynarray()
     tcase_add_test(test_case_ADynArray_set, test_ADynArray_set_failure_nullptr);
     suite_add_tcase(s, test_case_ADynArray_set);
 
-    test_case_ADynArray_setRange = tcase_create("Dynamic Array Test Case: ADynArray_setRange");
+    test_case_ADynArray_setRange = tcase_create("ADynArray Test Case: ADynArray_setRange");
     tcase_add_test(test_case_ADynArray_setRange, test_ADynArray_setRange_success_indexAndRangeInBounds);
     tcase_add_test(test_case_ADynArray_setRange, test_ADynArray_setRange_success_indexInBoundsRangeBeyondSize);
     tcase_add_test(test_case_ADynArray_setRange, test_ADynArray_setRange_success_indexInBoundsRangeBeyondSize_bufferExpanded);
@@ -2047,25 +2158,9 @@ Suite* test_suite_dynarray()
     tcase_add_test(test_case_ADynArray_setRange, test_ADynArray_setRange_failure_nullptr);
     suite_add_tcase(s, test_case_ADynArray_setRange);
 
-    test_case_ADynArray_mixed = tcase_create("Dynamic Array Test Case: ADynArray mixed tests");
+    test_case_ADynArray_mixed = tcase_create("ADynArray Test Case: mixed tests");
     tcase_add_test(test_case_ADynArray_mixed, test_ADynArray_mixedWithStruct);
     suite_add_tcase(s, test_case_ADynArray_mixed);
 
     return s;
-}
-
-int main(void)
-{
-    int number_failed;
-    Suite *s;
-    SRunner *sr;
-
-    s = test_suite_dynarray();
-    sr = srunner_create(s);
-
-    srunner_set_fork_status(sr, CK_NOFORK);
-    srunner_run_all(sr, CK_NORMAL);
-    number_failed = srunner_ntests_failed(sr);
-    srunner_free(sr);
-    return (number_failed == 0) ? EXIT_SUCCESS : EXIT_FAILURE;
 }
