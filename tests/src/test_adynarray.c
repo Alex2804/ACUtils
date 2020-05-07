@@ -503,7 +503,7 @@ START_TEST(test_ADynArray_remove_indexRangeInBounds)
     array.growStrategy = private_ACUtilsTest_ADynArray_growStrategy;
     array.capacity = 16;
     private_ACUtilsTest_ADynArray_reallocFail = false;
-    array.buffer = array.reallocator(NULL, array.capacity + 1);
+    array.buffer = array.reallocator(NULL, array.capacity);
     memcpy(array.buffer, "0123456789", 11);
     private_ACUtilsTest_ADynArray_reallocCount = 0;
     ADynArray_remove(&array, 2, 6);
@@ -523,7 +523,7 @@ START_TEST(test_ADynArray_remove_rangeBeyondBounds)
     array.growStrategy = private_ACUtilsTest_ADynArray_growStrategy;
     array.capacity = 16;
     private_ACUtilsTest_ADynArray_reallocFail = false;
-    array.buffer = array.reallocator(NULL, array.capacity + 1);
+    array.buffer = array.reallocator(NULL, array.capacity);
     memcpy(array.buffer, "0123456789", 11);
     private_ACUtilsTest_ADynArray_reallocCount = 0;
     ADynArray_remove(&array, 2, 100);
@@ -542,7 +542,7 @@ START_TEST(test_ADynArray_remove_zeroRange)
     array.growStrategy = private_ACUtilsTest_ADynArray_growStrategy;
     array.capacity = 16;
     private_ACUtilsTest_ADynArray_reallocFail = false;
-    array.buffer = array.reallocator(NULL, array.capacity + 1);
+    array.buffer = array.reallocator(NULL, array.capacity);
     memcpy(array.buffer, "0123456789", 11);
     private_ACUtilsTest_ADynArray_reallocCount = 0;
     ADynArray_remove(&array, 2, 0);
@@ -562,7 +562,7 @@ START_TEST(test_ADynArray_remove_indexBeyoundBounds)
     array.growStrategy = private_ACUtilsTest_ADynArray_growStrategy;
     array.capacity = 16;
     private_ACUtilsTest_ADynArray_reallocFail = false;
-    array.buffer = array.reallocator(NULL, array.capacity + 1);
+    array.buffer = array.reallocator(NULL, array.capacity);
     memcpy(array.buffer, "0123456789", 11);
     private_ACUtilsTest_ADynArray_reallocCount = 0;
     ADynArray_remove(&array, 13, 5);
@@ -1939,7 +1939,7 @@ START_TEST(test_ADynArray_setRange_failure_nullptr)
     private_ACUtilsTest_ADynArray_reallocFail = false;
     private_ACUtilsTest_ADynArray_reallocCount = 0;
     char c = '0';
-    ck_assert_uint_eq(ADynArray_setRange(arrayPtr, 0, 34, c), false);
+    ck_assert_uint_eq(ADynArray_setRange(arrayPtr, 0, 0, c), false);
     ck_assert_uint_eq(private_ACUtilsTest_ADynArray_reallocCount, 0);
 }
 END_TEST
@@ -2013,7 +2013,7 @@ Suite* private_ACUtilsTest_ADynArray_getTestSuite(void)
         *test_case_ADynArray_capacity, *test_case_ADynArray_buffer, *test_case_ADynArray_reserve,
         *test_case_ADynArray_shrinkToFit, *test_case_ADynArray_clear, *test_case_ADynArray_remove,
         *test_case_ADynArray_insert, *test_case_ADynArray_insertArray, *test_case_ADynArray_insertADynArray,
-        *test_case_ADynArray_add, *test_case_ADynArray_addArray, *test_case_ADynArray_addADynArray,
+        *test_case_ADynArray_append, *test_case_ADynArray_appendArray, *test_case_ADynArray_appendADynArray,
         *test_case_ADynArray_set, *test_case_ADynArray_setRange, *test_case_ADynArray_mixed;
 
     s = suite_create("ADynArray Test Suite");
@@ -2114,30 +2114,30 @@ Suite* private_ACUtilsTest_ADynArray_getTestSuite(void)
     tcase_add_test(test_case_ADynArray_insertADynArray, test_ADynArray_insertADynArray_failure_nullptrDestArray);
     suite_add_tcase(s, test_case_ADynArray_insertADynArray);
 
-    test_case_ADynArray_add = tcase_create("ADynArray Test Case: ADynArray_append");
-    tcase_add_test(test_case_ADynArray_add, test_ADynArray_append_success_enoughCapacity);
-    tcase_add_test(test_case_ADynArray_add, test_ADynArray_append_success_notEnoughCapacity);
-    tcase_add_test(test_case_ADynArray_add, test_ADynArray_append_failure_bufferExpansionFailed);
-    tcase_add_test(test_case_ADynArray_add, test_ADynArray_append_failure_nullptr);
-    suite_add_tcase(s, test_case_ADynArray_add);
+    test_case_ADynArray_append = tcase_create("ADynArray Test Case: ADynArray_append");
+    tcase_add_test(test_case_ADynArray_append, test_ADynArray_append_success_enoughCapacity);
+    tcase_add_test(test_case_ADynArray_append, test_ADynArray_append_success_notEnoughCapacity);
+    tcase_add_test(test_case_ADynArray_append, test_ADynArray_append_failure_bufferExpansionFailed);
+    tcase_add_test(test_case_ADynArray_append, test_ADynArray_append_failure_nullptr);
+    suite_add_tcase(s, test_case_ADynArray_append);
 
-    test_case_ADynArray_addArray = tcase_create("ADynArray Test Case: ADynArray_appendArray");
-    tcase_add_test(test_case_ADynArray_addArray, test_ADynArray_appendArray_success_enoughCapacity);
-    tcase_add_test(test_case_ADynArray_addArray, test_ADynArray_appendArray_success_notEnoughCapacity);
-    tcase_add_test(test_case_ADynArray_addArray, test_ADynArray_appendArray_success_nullptrArray);
-    tcase_add_test(test_case_ADynArray_addArray, test_ADynArray_appendArray_success_zeroArraySize);
-    tcase_add_test(test_case_ADynArray_addArray, test_ADynArray_appendArray_failure_bufferExpansionFailed);
-    tcase_add_test(test_case_ADynArray_addArray, test_ADynArray_appendArray_failure_nullptrDestArray);
-    suite_add_tcase(s, test_case_ADynArray_addArray);
+    test_case_ADynArray_appendArray = tcase_create("ADynArray Test Case: ADynArray_appendArray");
+    tcase_add_test(test_case_ADynArray_appendArray, test_ADynArray_appendArray_success_enoughCapacity);
+    tcase_add_test(test_case_ADynArray_appendArray, test_ADynArray_appendArray_success_notEnoughCapacity);
+    tcase_add_test(test_case_ADynArray_appendArray, test_ADynArray_appendArray_success_nullptrArray);
+    tcase_add_test(test_case_ADynArray_appendArray, test_ADynArray_appendArray_success_zeroArraySize);
+    tcase_add_test(test_case_ADynArray_appendArray, test_ADynArray_appendArray_failure_bufferExpansionFailed);
+    tcase_add_test(test_case_ADynArray_appendArray, test_ADynArray_appendArray_failure_nullptrDestArray);
+    suite_add_tcase(s, test_case_ADynArray_appendArray);
 
-    test_case_ADynArray_addADynArray = tcase_create("ADynArray Test Case: ADynArray_appendADynArray");
-    tcase_add_test(test_case_ADynArray_addADynArray, test_ADynArray_appendADynArray_success_enoughCapacity);
-    tcase_add_test(test_case_ADynArray_addADynArray, test_ADynArray_appendADynArray_success_notEnoughCapacity);
-    tcase_add_test(test_case_ADynArray_addADynArray, test_ADynArray_appendADynArray_success_nullptrSrcArray);
-    tcase_add_test(test_case_ADynArray_addADynArray, test_ADynArray_appendADynArray_success_zeroSizeSrcArray);
-    tcase_add_test(test_case_ADynArray_addADynArray, test_ADynArray_appendADynArray_failure_bufferExpansionFailed);
-    tcase_add_test(test_case_ADynArray_addADynArray, test_ADynArray_appendADynArray_failure_nullptrDestArray);
-    suite_add_tcase(s, test_case_ADynArray_addADynArray);
+    test_case_ADynArray_appendADynArray = tcase_create("ADynArray Test Case: ADynArray_appendADynArray");
+    tcase_add_test(test_case_ADynArray_appendADynArray, test_ADynArray_appendADynArray_success_enoughCapacity);
+    tcase_add_test(test_case_ADynArray_appendADynArray, test_ADynArray_appendADynArray_success_notEnoughCapacity);
+    tcase_add_test(test_case_ADynArray_appendADynArray, test_ADynArray_appendADynArray_success_nullptrSrcArray);
+    tcase_add_test(test_case_ADynArray_appendADynArray, test_ADynArray_appendADynArray_success_zeroSizeSrcArray);
+    tcase_add_test(test_case_ADynArray_appendADynArray, test_ADynArray_appendADynArray_failure_bufferExpansionFailed);
+    tcase_add_test(test_case_ADynArray_appendADynArray, test_ADynArray_appendADynArray_failure_nullptrDestArray);
+    suite_add_tcase(s, test_case_ADynArray_appendADynArray);
 
     test_case_ADynArray_set = tcase_create("ADynArray Test Case: ADynArray_set");
     tcase_add_test(test_case_ADynArray_set, test_ADynArray_set_success_indexInBounds);

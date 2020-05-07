@@ -185,13 +185,14 @@ ACUTILS_HD_FUNC bool private_ACUtils_ADynArray_insertArray(void *dynArray, size_
 
 ACUTILS_HD_FUNC bool private_ACUtils_ADynArray_setRange(void *dynArray, size_t index, size_t count, void *value, size_t typeSize)
 {
-    size_t appendCount, i;
+    size_t appendCount = 0, i;
     struct private_ACUtils_DynArray_Prototype* prototype = (struct private_ACUtils_DynArray_Prototype*) dynArray;
     if(dynArray == NULL)
         return false;
     if(index > prototype->size)
         index = prototype->size;
-    appendCount = ((index + count < prototype->size) ? 0 : (index + count - prototype->size));
+    if(index + count >= prototype->size)
+        appendCount = index + count - prototype->size;
     if(!private_ACUtils_ADynArray_reserve(dynArray, prototype->size + appendCount, false, typeSize))
         return false;
     prototype->size += appendCount;
