@@ -29,6 +29,7 @@ static void private_ACUtilsTest_AString_free(void* ptr) {
 static size_t ASTRING_MIN_CAPACITY = 8;
 static double ASTRING_CAPACITY_MULTIPLIER = 2;
 
+#ifndef ACUTILS_ONE_SOURCE
 struct AString
 {
     const ACUtilsReallocator reallocator;
@@ -37,6 +38,7 @@ struct AString
     size_t size;
     char *buffer;
 };
+#endif
 
 START_TEST(test_AString_construct_destruct_valid)
 {

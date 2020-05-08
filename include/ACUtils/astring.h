@@ -34,4 +34,8 @@ ACUTILS_HD_FUNC char AString_get(const struct AString *str, size_t index);
 ACUTILS_HD_FUNC bool AString_set(struct AString *str, size_t index, char c);
 ACUTILS_HD_FUNC bool AString_setRange(struct AString *str, size_t index, size_t count, char c);
 
+#ifdef ACUTILS_ONE_SOURCE
+#   include "../../src/astring.c"
+#endif
+
 #endif /* ACUTILS_ASTRING_H */
