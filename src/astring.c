@@ -78,12 +78,14 @@ ACUTILS_HD_FUNC bool AString_reserve(struct AString *str, size_t reserveSize)
 {
     if(str != NULL) {
         if(reserveSize > str->capacity) {
-            size_t multiplierExponent = ceil(log((double) reserveSize / private_ACUtils_AString_capacityMin) /
-                                             log(private_ACUtils_AString_capacityMul));
-            size_t aimedCapacity = (size_t) (private_ACUtils_AString_capacityMin *
-                                             pow(private_ACUtils_AString_capacityMul, multiplierExponent));
-            if(aimedCapacity - reserveSize > private_ACUtils_AString_capacityAllocMax)
-                aimedCapacity = reserveSize + private_ACUtils_AString_capacityAllocMax;
+            size_t aimedCapacity = private_ACUtils_AString_capacityMin;
+            if(reserveSize >= private_ACUtils_AString_capacityMin) {
+                size_t multiplierExponent = ceil(log((double) reserveSize / 2) /
+                        log(private_ACUtils_AString_capacityMul));
+                aimedCapacity = (size_t) (2 * pow(private_ACUtils_AString_capacityMul, multiplierExponent));
+                if(aimedCapacity - reserveSize > private_ACUtils_AString_capacityAllocMax)
+                    aimedCapacity = reserveSize + private_ACUtils_AString_capacityAllocMax;
+            }
             if(aimedCapacity >= reserveSize) {
                 char *tmpBuffer = (char*) str->reallocator(str->buffer, (aimedCapacity + 1) * sizeof(char));
                 if(tmpBuffer != NULL) {
