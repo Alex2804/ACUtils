@@ -436,6 +436,16 @@ START_TEST(test_AString_insert_success_beyondEndIndex)
     private_ACUtilsTest_AString_destructTestString(string);
 }
 END_TEST
+START_TEST(test_AString_insert_success_nullTerminator)
+{
+    struct AString string = private_ACUtilsTest_AString_constructTestString("1234567", 8);
+    private_ACUtilsTest_AString_setReallocFail(false, 0);
+    ck_assert_uint_eq(AString_insert(&string, 3, '\0'), true);
+    ACUTILSTEST_ASTRING_CHECK_ASTRING(string, "123", 8);
+    ACUTILSTEST_ASTRING_CHECK_REALLOC(0);
+    private_ACUtilsTest_AString_destructTestString(string);
+}
+END_TEST
 START_TEST(test_AString_insert_success_bufferExpanded)
 {
     struct AString string = private_ACUtilsTest_AString_constructTestString("01345678", 8);
@@ -675,6 +685,16 @@ START_TEST(test_AString_append_success_enoughCapacity)
     private_ACUtilsTest_AString_setReallocFail(false, 0);
     ck_assert_uint_eq(AString_append(&string, '5'), true);
     ACUTILSTEST_ASTRING_CHECK_ASTRING(string, "012345", 8);
+    ACUTILSTEST_ASTRING_CHECK_REALLOC(0);
+    private_ACUtilsTest_AString_destructTestString(string);
+}
+END_TEST
+START_TEST(test_AString_append_success_nullTerminator)
+{
+    struct AString string = private_ACUtilsTest_AString_constructTestString("01234", 8);
+    private_ACUtilsTest_AString_setReallocFail(false, 0);
+    ck_assert_uint_eq(AString_append(&string, '\0'), true);
+    ACUTILSTEST_ASTRING_CHECK_ASTRING(string, "01234", 8);
     ACUTILSTEST_ASTRING_CHECK_REALLOC(0);
     private_ACUtilsTest_AString_destructTestString(string);
 }
@@ -1271,6 +1291,7 @@ Suite* private_ACUtilsTest_AString_getTestSuite(void)
     tcase_add_test(test_case_AString_insert, test_AString_insert_success_zeroIndex);
     tcase_add_test(test_case_AString_insert, test_AString_insert_success_middleIndex);
     tcase_add_test(test_case_AString_insert, test_AString_insert_success_beyondEndIndex);
+    tcase_add_test(test_case_AString_insert, test_AString_insert_success_nullTerminator);
     tcase_add_test(test_case_AString_insert, test_AString_insert_success_bufferExpanded);
     tcase_add_test(test_case_AString_insert, test_AString_insert_failure_bufferExpansionFailed);
     tcase_add_test(test_case_AString_insert, test_AString_insert_failure_nullptr);
@@ -1302,6 +1323,7 @@ Suite* private_ACUtilsTest_AString_getTestSuite(void)
 
     test_case_AString_append = tcase_create("AString Test Case: AString_append");
     tcase_add_test(test_case_AString_append, test_AString_append_success_enoughCapacity);
+    tcase_add_test(test_case_AString_append, test_AString_append_success_nullTerminator);
     tcase_add_test(test_case_AString_append, test_AString_append_success_notEnoughCapacity);
     tcase_add_test(test_case_AString_append, test_AString_append_failure_bufferExpansionFailed);
     tcase_add_test(test_case_AString_append, test_AString_append_failure_nullptr);
