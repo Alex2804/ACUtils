@@ -211,4 +211,22 @@ ACUTILS_HD_FUNC bool AString_setRange(struct AString *str, size_t index, size_t 
     return true;
 }
 
+ACUTILS_HD_FUNC bool AString_equals(const struct AString *str1, const struct AString *str2)
+{
+    if(str2 == NULL || str1 == NULL)
+        return str1 == str2;
+    return strcmp(str1->buffer, str2->buffer) == 0;
+}
+ACUTILS_HD_FUNC int AString_compare(const struct AString *str1, const struct AString *str2)
+{
+    if(str2 == NULL && str1 == NULL)
+        return 0;
+    else if(str1 == NULL)
+        return -1;
+    else if(str2 == NULL)
+        return 1;
+    return strcmp(str1->buffer, str2->buffer);
+}
+
+
 #endif
