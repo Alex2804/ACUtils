@@ -137,6 +137,34 @@ ACUTILS_HD_FUNC void AString_remove(struct AString *str, size_t index, size_t co
         }
     }
 }
+ACUTILS_HD_FUNC void AString_trim(struct AString *str, char c)
+{
+    AString_trimBack(str, c);
+    AString_trimFront(str, c);
+}
+ACUTILS_HD_FUNC void AString_trimFront(struct AString *str, char c)
+{
+    size_t trimCount = 0;
+    if(str == NULL)
+        return;
+    while(str->buffer[trimCount] == c && trimCount < str->size)
+        ++trimCount;
+    str->size -= trimCount;
+    if(str->size > 0)
+        memmove(str->buffer, str->buffer + trimCount, str->size);
+    str->buffer[str->size] = '\0';
+}
+ACUTILS_HD_FUNC void AString_trimBack(struct AString *str, char c)
+{
+    size_t trimmedSize;
+    if(str == NULL || str->size == 0)
+        return;
+    trimmedSize = str->size;
+    while(trimmedSize > 0 && str->buffer[trimmedSize - 1] == c)
+        --trimmedSize;
+    str->size = trimmedSize;
+    str->buffer[str->size] = '\0';
+}
 
 ACUTILS_HD_FUNC bool AString_insert(struct AString *str, size_t index, char c)
 {
@@ -232,5 +260,26 @@ ACUTILS_HD_FUNC int AString_compare(const struct AString *str1, const struct ASt
     return strcmp(str1->buffer, str2->buffer);
 }
 
+ACUTILS_HD_FUNC struct AString* AString_substring(const struct AString *str, size_t index, size_t count)
+{
+    struct AString *substring;
+    if(str == NULL)
+        return NULL;
+    if(index > str->size)
+        index = str->size;
+    if(count >= -index - 1 || index + count >= str->size)
+        count = str->size - index;
+    substring = AString_constructWithAllocator(str->reallocator, str->deallocator);
+    if(substring == NULL) {
+        return NULL;
+    } else if(!AString_reserve(substring, count)) {
+        AString_destruct(substring);
+        return NULL;
+    }
+    memcpy(substring->buffer, str->buffer + index, count);
+    substring->size = count;
+    substring->buffer[count] = '\0';
+    return substring;
+}
 
 #endif
