@@ -284,7 +284,7 @@ ACUTILS_HD_FUNC struct AString* AString_substring(const struct AString *str, siz
     return substring;
 }
 
-ACUTILS_HD_FUNC struct ASplittedString* AString_split(const struct AString *str, char c)
+ACUTILS_HD_FUNC struct ASplittedString* AString_split(const struct AString *str, char c, bool discardEmpty)
 {
     size_t i, behindLastDelimiterIndex = 0;
     struct ASplittedString *splitted;
@@ -295,10 +295,12 @@ ACUTILS_HD_FUNC struct ASplittedString* AString_split(const struct AString *str,
         return NULL;
     for(i = 0; i <= str->size; ++i) {
         if(i == str->size || str->buffer[i] == c) {
-            struct AString *substr = AString_substring(str, behindLastDelimiterIndex, i - behindLastDelimiterIndex);
-            if(substr == NULL || !ADynArray_append(splitted, substr)) {
-                AString_freeSplitted(splitted);
-                return NULL;
+            if(!discardEmpty || i - behindLastDelimiterIndex > 0) {
+                struct AString *substr = AString_substring(str, behindLastDelimiterIndex, i - behindLastDelimiterIndex);
+                if(substr == NULL || !ADynArray_append(splitted, substr)) {
+                    AString_freeSplitted(splitted);
+                    return NULL;
+                }
             }
             behindLastDelimiterIndex = i + 1;
         }

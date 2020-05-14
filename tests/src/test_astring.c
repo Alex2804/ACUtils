@@ -1498,12 +1498,28 @@ START_TEST(test_AString_substring_nullptr)
 END_TEST
 
 
+START_TEST(test_AString_split_emptyString)
+{
+    struct AString string = private_ACUtilsTest_AString_constructTestString("", 8);
+    struct ASplittedString *splitted;
+    private_ACUtilsTest_AString_setReallocFail(false, 0);
+    splitted = AString_split(&string, ';', false);
+    ACUTILSTEST_ASTRING_CHECK_ASTRING(string, "", 8);
+    ck_assert_ptr_nonnull(splitted);
+    ck_assert_uint_eq(ADynArray_size(splitted), 1);
+    ACUTILSTEST_ASTRING_CHECK_ASTRING(*ADynArray_get(splitted, 0), "", 8);
+    AString_freeSplitted(splitted);
+    ACUTILSTEST_ASTRING_CHECK_ASTRING(string, "", 8);
+    ck_assert_uint_eq(private_ACUtilsTest_AString_reallocCount, private_ACUtilsTest_AString_freeCount);
+    private_ACUtilsTest_AString_destructTestString(string);
+}
+END_TEST
 START_TEST(test_AString_split_noDelimiter)
 {
     struct AString string = private_ACUtilsTest_AString_constructTestString("01234567", 8);
     struct ASplittedString *splitted;
     private_ACUtilsTest_AString_setReallocFail(false, 0);
-    splitted = AString_split(&string, ';');
+    splitted = AString_split(&string, ';', false);
     ACUTILSTEST_ASTRING_CHECK_ASTRING(string, "01234567", 8);
     ck_assert_ptr_nonnull(splitted);
     ck_assert_uint_eq(ADynArray_size(splitted), 1);
@@ -1519,7 +1535,7 @@ START_TEST(test_AString_split_firstCharDelimiter)
     struct AString string = private_ACUtilsTest_AString_constructTestString(";0123456", 8);
     struct ASplittedString *splitted;
     private_ACUtilsTest_AString_setReallocFail(false, 0);
-    splitted = AString_split(&string, ';');
+    splitted = AString_split(&string, ';', false);
     ACUTILSTEST_ASTRING_CHECK_ASTRING(string, ";0123456", 8);
     ck_assert_ptr_nonnull(splitted);
     ck_assert_uint_eq(ADynArray_size(splitted), 2);
@@ -1536,7 +1552,7 @@ START_TEST(test_AString_split_lastCharDelimiter)
     struct AString string = private_ACUtilsTest_AString_constructTestString("0123456;", 8);
     struct ASplittedString *splitted;
     private_ACUtilsTest_AString_setReallocFail(false, 0);
-    splitted = AString_split(&string, ';');
+    splitted = AString_split(&string, ';', false);
     ACUTILSTEST_ASTRING_CHECK_ASTRING(string, "0123456;", 8);
     ck_assert_ptr_nonnull(splitted);
     ck_assert_uint_eq(ADynArray_size(splitted), 2);
@@ -1553,7 +1569,7 @@ START_TEST(test_AString_split_multipleDelimiters)
     struct AString string = private_ACUtilsTest_AString_constructTestString(";01;;23;", 8);
     struct ASplittedString *splitted;
     private_ACUtilsTest_AString_setReallocFail(false, 0);
-    splitted = AString_split(&string, ';');
+    splitted = AString_split(&string, ';', false);
     ACUTILSTEST_ASTRING_CHECK_ASTRING(string, ";01;;23;", 8);
     ck_assert_ptr_nonnull(splitted);
     ck_assert_uint_eq(ADynArray_size(splitted), 5);
@@ -1568,12 +1584,29 @@ START_TEST(test_AString_split_multipleDelimiters)
     private_ACUtilsTest_AString_destructTestString(string);
 }
 END_TEST
+START_TEST(test_AString_split_multipleDelimiters_discardEmpty)
+{
+    struct AString string = private_ACUtilsTest_AString_constructTestString(";01;;23;", 8);
+    struct ASplittedString *splitted;
+    private_ACUtilsTest_AString_setReallocFail(false, 0);
+    splitted = AString_split(&string, ';', true);
+    ACUTILSTEST_ASTRING_CHECK_ASTRING(string, ";01;;23;", 8);
+    ck_assert_ptr_nonnull(splitted);
+    ck_assert_uint_eq(ADynArray_size(splitted), 2);
+    ACUTILSTEST_ASTRING_CHECK_ASTRING(*ADynArray_get(splitted, 0), "01", 8);
+    ACUTILSTEST_ASTRING_CHECK_ASTRING(*ADynArray_get(splitted, 1), "23", 8);
+    AString_freeSplitted(splitted);
+    ACUTILSTEST_ASTRING_CHECK_ASTRING(string, ";01;;23;", 8);
+    ck_assert_uint_eq(private_ACUtilsTest_AString_reallocCount, private_ACUtilsTest_AString_freeCount);
+    private_ACUtilsTest_AString_destructTestString(string);
+}
+END_TEST
 START_TEST(test_AString_split_noMemoryAvailable)
 {
     struct AString string = private_ACUtilsTest_AString_constructTestString(";01;;23;", 8);
     struct ASplittedString *splitted;
     private_ACUtilsTest_AString_setReallocFail(true, 0);
-    splitted = AString_split(&string, ';');
+    splitted = AString_split(&string, ';', false);
     ACUTILSTEST_ASTRING_CHECK_ASTRING(string, ";01;;23;", 8);
     ck_assert_ptr_null(splitted);
     ck_assert_uint_eq(private_ACUtilsTest_AString_reallocCount, private_ACUtilsTest_AString_freeCount);
@@ -1584,7 +1617,7 @@ START_TEST(test_AString_split_nullptr)
 {
     private_ACUtilsTest_AString_reallocFail = false;
     private_ACUtilsTest_AString_reallocCount = 0;
-    ck_assert_ptr_null(AString_split(NULL, ' '));
+    ck_assert_ptr_null(AString_split(NULL, ' ', false));
     AString_freeSplitted(NULL);
     ACUTILSTEST_ASTRING_CHECK_REALLOC(0);
 }
@@ -1808,10 +1841,12 @@ Suite* private_ACUtilsTest_AString_getTestSuite(void)
     suite_add_tcase(s, test_case_AString_substring);
 
     test_case_AString_split = tcase_create("AString Test Case: AString_split");
+    tcase_add_test(test_case_AString_split, test_AString_split_emptyString);
     tcase_add_test(test_case_AString_split, test_AString_split_noDelimiter);
     tcase_add_test(test_case_AString_split, test_AString_split_firstCharDelimiter);
     tcase_add_test(test_case_AString_split, test_AString_split_lastCharDelimiter);
     tcase_add_test(test_case_AString_split, test_AString_split_multipleDelimiters);
+    tcase_add_test(test_case_AString_split, test_AString_split_multipleDelimiters_discardEmpty);
     tcase_add_test(test_case_AString_split, test_AString_split_noMemoryAvailable);
     tcase_add_test(test_case_AString_split, test_AString_split_nullptr);
     suite_add_tcase(s, test_case_AString_split);

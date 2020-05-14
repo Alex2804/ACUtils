@@ -45,7 +45,7 @@ ACUTILS_HD_FUNC int AString_compare(const struct AString *str1, const struct ASt
 
 ACUTILS_HD_FUNC struct AString* AString_substring(const struct AString *str, size_t index, size_t count);
 
-ACUTILS_HD_FUNC struct ASplittedString* AString_split(const struct AString *str, char c);
+ACUTILS_HD_FUNC struct ASplittedString* AString_split(const struct AString *str, char c, bool discardEmpty);
 ACUTILS_HD_FUNC void AString_freeSplitted(struct ASplittedString *splitted);
 
 #ifdef ACUTILS_ONE_SOURCE
