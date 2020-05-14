@@ -27,13 +27,19 @@ ACUTILS_HD_FUNC struct AString* AString_construct(void)
 }
 ACUTILS_HD_FUNC struct AString* AString_constructWithAllocator(ACUtilsReallocator reallocator, ACUtilsDeallocator deallocator)
 {
+    return AString_constructWithCapacityAndAllocator(private_ACUtils_AString_capacityMin, reallocator, deallocator);
+}
+ACUTILS_HD_FUNC struct AString* AString_constructWithCapacityAndAllocator(size_t capacity, ACUtilsReallocator reallocator, ACUtilsDeallocator deallocator)
+{
     struct AString *string;
     if(reallocator == NULL || deallocator == NULL)
         return NULL;
+    if(capacity < private_ACUtils_AString_capacityMin)
+        capacity = private_ACUtils_AString_capacityMin;
     string = (struct AString*) reallocator(NULL, sizeof(struct AString));
     if(string != NULL) {
         struct AString tmpString = {.reallocator = reallocator, .deallocator = deallocator,
-                .size = 0, .capacity = private_ACUtils_AString_capacityMin};
+                .size = 0, .capacity = capacity};
         memcpy(string, &tmpString, sizeof(struct AString));
         string->buffer = (char*) string->reallocator(NULL, (string->capacity + 1) * sizeof(char));
         if(string->buffer == NULL) {
@@ -231,7 +237,7 @@ ACUTILS_HD_FUNC bool AString_setRange(struct AString *str, size_t index, size_t 
         return false;
     if(index > str->size)
         index = str->size;
-    if(index + count >= str->size)
+    if(count >= -index - 1 || index + count >= str->size)
         appendCount = index + count - str->size;
     if(!AString_reserve(str, str->size + appendCount))
         return false;
@@ -269,17 +275,42 @@ ACUTILS_HD_FUNC struct AString* AString_substring(const struct AString *str, siz
         index = str->size;
     if(count >= -index - 1 || index + count >= str->size)
         count = str->size - index;
-    substring = AString_constructWithAllocator(str->reallocator, str->deallocator);
-    if(substring == NULL) {
+    substring = AString_constructWithCapacityAndAllocator(count, str->reallocator, str->deallocator);
+    if(substring == NULL)
         return NULL;
-    } else if(!AString_reserve(substring, count)) {
-        AString_destruct(substring);
-        return NULL;
-    }
     memcpy(substring->buffer, str->buffer + index, count);
-    substring->size = count;
     substring->buffer[count] = '\0';
+    substring->size = count;
     return substring;
+}
+
+ACUTILS_HD_FUNC struct ASplittedString* AString_split(const struct AString *str, char c)
+{
+    size_t i, behindLastDelimiterIndex = 0;
+    struct ASplittedString *splitted;
+    if(str == NULL)
+        return NULL;
+    splitted = ADynArray_constructWithAllocator(struct ASplittedString, str->reallocator, str->deallocator);
+    if(splitted == NULL)
+        return NULL;
+    for(i = 0; i <= str->size; ++i) {
+        if(i == str->size || str->buffer[i] == c) {
+            struct AString *substr = AString_substring(str, behindLastDelimiterIndex, i - behindLastDelimiterIndex);
+            if(substr == NULL || !ADynArray_append(splitted, substr)) {
+                AString_freeSplitted(splitted);
+                return NULL;
+            }
+            behindLastDelimiterIndex = i + 1;
+        }
+    }
+    return splitted;
+}
+ACUTILS_HD_FUNC void AString_freeSplitted(struct ASplittedString *splitted)
+{
+    size_t i, splittedSize = ADynArray_size(splitted);
+    for(i = 0; i < splittedSize; ++i)
+        AString_destruct(ADynArray_get(splitted, i));
+    ADynArray_destruct(splitted);
 }
 
 #endif

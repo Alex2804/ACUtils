@@ -3,11 +3,14 @@
 
 #include "macros.h"
 #include "types.h"
+#include "adynarray.h"
 
 struct AString;
+A_DYNAMIC_ARRAY_DEFINITION(ASplittedString, struct AString*);
 
 ACUTILS_HD_FUNC struct AString* AString_construct(void);
 ACUTILS_HD_FUNC struct AString* AString_constructWithAllocator(ACUtilsReallocator reallocator, ACUtilsDeallocator deallocator);
+ACUTILS_HD_FUNC struct AString* AString_constructWithCapacityAndAllocator(size_t capacity, ACUtilsReallocator reallocator, ACUtilsDeallocator deallocator);
 ACUTILS_HD_FUNC void AString_destruct(struct AString *str);
 
 ACUTILS_HD_FUNC ACUtilsReallocator AString_reallocator(const struct AString *str);
@@ -41,6 +44,9 @@ ACUTILS_HD_FUNC bool AString_equals(const struct AString *str1, const struct ASt
 ACUTILS_HD_FUNC int AString_compare(const struct AString *str1, const struct AString *str2);
 
 ACUTILS_HD_FUNC struct AString* AString_substring(const struct AString *str, size_t index, size_t count);
+
+ACUTILS_HD_FUNC struct ASplittedString* AString_split(const struct AString *str, char c);
+ACUTILS_HD_FUNC void AString_freeSplitted(struct ASplittedString *splitted);
 
 #ifdef ACUTILS_ONE_SOURCE
 #   include "../../src/astring.c"
