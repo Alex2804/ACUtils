@@ -233,21 +233,63 @@ ACUTILS_HD_FUNC bool AString_set(struct AString *str, size_t index, char c)
 }
 ACUTILS_HD_FUNC bool AString_setRange(struct AString *str, size_t index, size_t count, char c)
 {
-    size_t appendCount = 0, i, endIndex;
-    if(str == nullptr)
+    return AString_replaceRange(str, index, count, c, count);
+}
+
+ACUTILS_HD_FUNC bool AString_replaceRange(struct AString *str, size_t index, size_t count, char c, size_t len)
+{
+    if(str == nullptr) {
         return false;
+    } else if(len == 0) {
+        AString_remove(str, index, count);
+        return true;
+    }
     if(index > str->size)
         index = str->size;
     if(count >= ((size_t) 0) - index - 1 || index + count >= str->size)
-        appendCount = index + count - str->size;
-    if(!AString_reserve(str, str->size + appendCount))
-        return false;
-    str->size += appendCount;
-    endIndex = index + count;
-    for(i = index; i < endIndex; ++i)
-        str->buffer[i] = c;
-    str->buffer[str->size] = '\0';
+        count = str->size - index;
+    if(len < count) {
+        AString_remove(str, index, count - len);
+    } else if(len > count) {
+        size_t requiredSize = str->size + (len - count);
+        if(!AString_reserve(str, requiredSize))
+            return false;
+        memmove(str->buffer + index + len, str->buffer + index + count, str->size - index - count + 1);
+        str->size = requiredSize;
+    }
+    memset(str->buffer + index, c, len);
     return true;
+}
+ACUTILS_HD_FUNC bool AString_replaceRangeCString(struct AString *str, size_t index, size_t count, const char *cstr, size_t len)
+{
+    if(str == nullptr) {
+        return false;
+    } else if(cstr == nullptr || len == 0) {
+        AString_remove(str, index, count);
+        return true;
+    }
+    if(index >= str->size)
+        return AString_appendCString(str, cstr, len);
+    if(count >= ((size_t) 0) - index - 1 || index + count >= str->size)
+        count = str->size - index;
+    if(len < count) {
+        AString_remove(str, index, count - len);
+    } else if(len > count) {
+        size_t requiredSize = str->size + (len - count);
+        if(!AString_reserve(str, requiredSize))
+            return false;
+        memmove(str->buffer + index + len, str->buffer + index + count, str->size - index - count + 1);
+        str->size = requiredSize;
+    }
+    memcpy(str->buffer + index, cstr, len * sizeof(char));
+    return true;
+}
+ACUTILS_HD_FUNC bool AString_replaceRangeAString(struct AString *str, size_t index, size_t count, const struct AString *rep)
+{
+    if(rep == nullptr)
+        return AString_replaceRangeCString(str, index, count, nullptr, 0);
+    else
+        return AString_replaceRangeCString(str, index, count, rep->buffer, rep->size);
 }
 
 ACUTILS_HD_FUNC bool AString_equals(const struct AString *str1, const struct AString *str2)

@@ -1268,6 +1268,527 @@ START_TEST(test_AString_setRange_failure_nullptr)
 END_TEST
 
 
+START_TEST(test_AString_replaceRange_success_indexAndRangeInBounds)
+{
+    struct AString string = private_ACUtilsTest_AString_constructTestString("ww2ww5ww", 8);
+    private_ACUtilsTest_AString_setReallocFail(false, 0);
+    ACUTILS_ASSERT_UINT_EQ(AString_replaceRange(&string, 0, 2, 'x', 2), true);
+    ACUTILSTEST_ASTRING_CHECK_ASTRING(string, "xx2ww5ww", 8);
+    ACUTILSTEST_ASTRING_CHECK_REALLOC(0);
+    ACUTILS_ASSERT_UINT_EQ(AString_replaceRange(&string, 3, 2, 'y', 2), true);
+    ACUTILSTEST_ASTRING_CHECK_ASTRING(string, "xx2yy5ww", 8);
+    ACUTILSTEST_ASTRING_CHECK_REALLOC(0);
+    ACUTILS_ASSERT_UINT_EQ(AString_replaceRange(&string, 6, 2, 'z', 2), true);
+    ACUTILSTEST_ASTRING_CHECK_ASTRING(string, "xx2yy5zz", 8);
+    ACUTILSTEST_ASTRING_CHECK_REALLOC(0);
+    private_ACUtilsTest_AString_destructTestString(string);
+}
+END_TEST
+START_TEST(test_AString_replaceRange_success_zeroCount)
+{
+    struct AString string = private_ACUtilsTest_AString_constructTestString("01267", 8);
+    private_ACUtilsTest_AString_setReallocFail(false, 0);
+    ACUTILS_ASSERT_UINT_EQ(AString_replaceRange(&string, 3, 0, 'x', 3), true);
+    ACUTILSTEST_ASTRING_CHECK_ASTRING(string, "012xxx67", 8);
+    ACUTILSTEST_ASTRING_CHECK_REALLOC(0);
+    private_ACUtilsTest_AString_destructTestString(string);
+}
+END_TEST
+START_TEST(test_AString_replaceRange_success_smallerReplaceLength)
+{
+    struct AString string = private_ACUtilsTest_AString_constructTestString("012xxx45", 8);
+    private_ACUtilsTest_AString_setReallocFail(false, 0);
+    ACUTILS_ASSERT_UINT_EQ(AString_replaceRange(&string, 3, 3, 'y', 1), true);
+    ACUTILSTEST_ASTRING_CHECK_ASTRING(string, "012y45", 8);
+    ACUTILSTEST_ASTRING_CHECK_REALLOC(0);
+    private_ACUtilsTest_AString_destructTestString(string);
+}
+END_TEST
+START_TEST(test_AString_replaceRange_success_biggerReplaceLength)
+{
+    struct AString string = private_ACUtilsTest_AString_constructTestString("012x67", 8);
+    private_ACUtilsTest_AString_setReallocFail(false, 0);
+    ACUTILS_ASSERT_UINT_EQ(AString_replaceRange(&string, 3, 1, 'y', 3), true);
+    ACUTILSTEST_ASTRING_CHECK_ASTRING(string, "012yyy67", 8);
+    ACUTILSTEST_ASTRING_CHECK_REALLOC(0);
+    private_ACUtilsTest_AString_destructTestString(string);
+}
+END_TEST
+START_TEST(test_AString_replaceRange_success_biggerReplaceLength_bufferExpanded)
+{
+    struct AString string = private_ACUtilsTest_AString_constructTestString("012x678", 8);
+    private_ACUtilsTest_AString_setReallocFail(false, 0);
+    ACUTILS_ASSERT_UINT_EQ(AString_replaceRange(&string, 3, 1, 'y', 3), true);
+    ACUTILSTEST_ASTRING_CHECK_ASTRING(string, "012yyy678", 16);
+    ACUTILSTEST_ASTRING_CHECK_REALLOC(1);
+    private_ACUtilsTest_AString_destructTestString(string);
+}
+END_TEST
+START_TEST(test_AString_replaceRange_success_zeroReplaceLength)
+{
+    struct AString string = private_ACUtilsTest_AString_constructTestString("012xx345", 8);
+    private_ACUtilsTest_AString_setReallocFail(false, 0);
+    ACUTILS_ASSERT_UINT_EQ(AString_replaceRange(&string, 3, 2, 'y', 0), true);
+    ACUTILSTEST_ASTRING_CHECK_ASTRING(string, "012345", 8);
+    ACUTILSTEST_ASTRING_CHECK_REALLOC(0);
+    private_ACUtilsTest_AString_destructTestString(string);
+}
+END_TEST
+START_TEST(test_AString_replaceRange_success_indexInBoundsRangeBeyondSize)
+{
+    struct AString string = private_ACUtilsTest_AString_constructTestString("01234x", 8);
+    private_ACUtilsTest_AString_setReallocFail(false, 0);
+    ACUTILS_ASSERT_UINT_EQ(AString_replaceRange(&string, 5, 666, 'y', 2), true);
+    ACUTILSTEST_ASTRING_CHECK_ASTRING(string, "01234yy", 8);
+    ACUTILSTEST_ASTRING_CHECK_REALLOC(0);
+    ACUTILS_ASSERT_UINT_EQ(AString_replaceRange(&string, 6, 42, 'z', 2), true);
+    ACUTILSTEST_ASTRING_CHECK_ASTRING(string, "01234yzz", 8);
+    ACUTILSTEST_ASTRING_CHECK_REALLOC(0);
+    private_ACUtilsTest_AString_destructTestString(string);
+}
+END_TEST
+START_TEST(test_AString_replaceRange_success_indexInBoundsRangeBeyondSize_bufferExpanded)
+{
+    struct AString string = private_ACUtilsTest_AString_constructTestString("01234x", 8);
+    private_ACUtilsTest_AString_setReallocFail(false, 0);
+    ACUTILS_ASSERT_UINT_EQ(AString_replaceRange(&string, 5, 666, 'y', 4), true);
+    ACUTILSTEST_ASTRING_CHECK_ASTRING(string, "01234yyyy", 16);
+    ACUTILSTEST_ASTRING_CHECK_REALLOC(1);
+    private_ACUtilsTest_AString_destructTestString(string);
+}
+END_TEST
+START_TEST(test_AString_replaceRange_success_indexAndRangeBeyondSize)
+{
+    struct AString string = private_ACUtilsTest_AString_constructTestString("0123", 8);
+    private_ACUtilsTest_AString_setReallocFail(false, 0);
+    ACUTILS_ASSERT_UINT_EQ(AString_replaceRange(&string, 4, 666, 'y', 2), true);
+    ACUTILSTEST_ASTRING_CHECK_ASTRING(string, "0123yy", 8);
+    ACUTILSTEST_ASTRING_CHECK_REALLOC(0);
+    ACUTILS_ASSERT_UINT_EQ(AString_replaceRange(&string, 666, 42, 'z', 2), true);
+    ACUTILSTEST_ASTRING_CHECK_ASTRING(string, "0123yyzz", 8);
+    ACUTILSTEST_ASTRING_CHECK_REALLOC(0);
+    private_ACUtilsTest_AString_destructTestString(string);
+}
+END_TEST
+START_TEST(test_AString_replaceRange_success_indexAndRangeBeyondSize_bufferExpanded)
+{
+    struct AString string = private_ACUtilsTest_AString_constructTestString("012345", 8);
+    private_ACUtilsTest_AString_setReallocFail(false, 0);
+    ACUTILS_ASSERT_UINT_EQ(AString_replaceRange(&string, 42, 666, 'x', 3), true);
+    ACUTILSTEST_ASTRING_CHECK_ASTRING(string, "012345xxx", 16);
+    ACUTILSTEST_ASTRING_CHECK_REALLOC(1);
+    private_ACUtilsTest_AString_destructTestString(string);
+}
+END_TEST
+START_TEST(test_AString_replaceRange_failure_indexInBoundsRangeBeyondSize_bufferExpansionFailed)
+{
+    struct AString string = private_ACUtilsTest_AString_constructTestString("01234x", 8);
+    private_ACUtilsTest_AString_setReallocFail(true, 0);
+    ACUTILS_ASSERT_UINT_EQ(AString_replaceRange(&string, 5, 666, 'y', 4), false);
+    ACUTILSTEST_ASTRING_CHECK_ASTRING(string, "01234x", 8);
+    ACUTILSTEST_ASTRING_CHECK_REALLOC(0);
+    private_ACUtilsTest_AString_destructTestString(string);
+}
+END_TEST
+START_TEST(test_AString_replaceRange_failure_indexAndRangeBeyondSize_bufferExpansionFailed)
+{
+    struct AString string = private_ACUtilsTest_AString_constructTestString("012345", 8);
+    private_ACUtilsTest_AString_setReallocFail(true, 0);
+    ACUTILS_ASSERT_UINT_EQ(AString_replaceRange(&string, 42, 666, 'x', 3), false);
+    ACUTILSTEST_ASTRING_CHECK_ASTRING(string, "012345", 8);
+    ACUTILSTEST_ASTRING_CHECK_REALLOC(0);
+    private_ACUtilsTest_AString_destructTestString(string);
+}
+END_TEST
+START_TEST(test_AString_replaceRange_failure_nullptrDestString)
+{
+    private_ACUtilsTest_AString_setReallocFail(false, 0);
+    private_ACUtilsTest_AString_reallocCount = 0;
+    ACUTILS_ASSERT_UINT_EQ(AString_replaceRange(nullptr, 0, 0, 'x', 3), false);
+    ACUTILSTEST_ASTRING_CHECK_REALLOC(0);
+}
+END_TEST
+
+
+START_TEST(test_AString_replaceRangeCString_success_indexAndRangeInBounds)
+{
+    struct AString string = private_ACUtilsTest_AString_constructTestString("xx2xx5xx", 8);
+    private_ACUtilsTest_AString_setReallocFail(false, 0);
+    ACUTILS_ASSERT_UINT_EQ(AString_replaceRangeCString(&string, 0, 2, "01", 2), true);
+    ACUTILSTEST_ASTRING_CHECK_ASTRING(string, "012xx5xx", 8);
+    ACUTILSTEST_ASTRING_CHECK_REALLOC(0);
+    ACUTILS_ASSERT_UINT_EQ(AString_replaceRangeCString(&string, 3, 2, "34", 2), true);
+    ACUTILSTEST_ASTRING_CHECK_ASTRING(string, "012345xx", 8);
+    ACUTILSTEST_ASTRING_CHECK_REALLOC(0);
+    ACUTILS_ASSERT_UINT_EQ(AString_replaceRangeCString(&string, 6, 2, "67", 2), true);
+    ACUTILSTEST_ASTRING_CHECK_ASTRING(string, "01234567", 8);
+    ACUTILSTEST_ASTRING_CHECK_REALLOC(0);
+    private_ACUtilsTest_AString_destructTestString(string);
+}
+END_TEST
+START_TEST(test_AString_replaceRangeCString_success_zeroCount)
+{
+    struct AString string = private_ACUtilsTest_AString_constructTestString("01267", 8);
+    private_ACUtilsTest_AString_setReallocFail(false, 0);
+    ACUTILS_ASSERT_UINT_EQ(AString_replaceRangeCString(&string, 3, 0, "345", 3), true);
+    ACUTILSTEST_ASTRING_CHECK_ASTRING(string, "01234567", 8);
+    ACUTILSTEST_ASTRING_CHECK_REALLOC(0);
+    private_ACUtilsTest_AString_destructTestString(string);
+}
+END_TEST
+START_TEST(test_AString_replaceRangeCString_success_notAllOfReplaceArray)
+{
+    struct AString string = private_ACUtilsTest_AString_constructTestString("012xxx67", 8);
+    private_ACUtilsTest_AString_setReallocFail(false, 0);
+    ACUTILS_ASSERT_UINT_EQ(AString_replaceRangeCString(&string, 3, 3, "34567", 3), true);
+    ACUTILSTEST_ASTRING_CHECK_ASTRING(string, "01234567", 8);
+    ACUTILSTEST_ASTRING_CHECK_REALLOC(0);
+    private_ACUtilsTest_AString_destructTestString(string);
+}
+END_TEST
+START_TEST(test_AString_replaceRangeCString_success_nullptrReplaceArray)
+{
+    struct AString string = private_ACUtilsTest_AString_constructTestString("012xxx34", 8);
+    private_ACUtilsTest_AString_setReallocFail(false, 0);
+    ACUTILS_ASSERT_UINT_EQ(AString_replaceRangeCString(&string, 666, 42, nullptr, 3), true);
+    ACUTILSTEST_ASTRING_CHECK_ASTRING(string, "012xxx34", 8);
+    ACUTILSTEST_ASTRING_CHECK_REALLOC(0);
+    ACUTILS_ASSERT_UINT_EQ(AString_replaceRangeCString(&string, 3, 3, nullptr, 3), true);
+    ACUTILSTEST_ASTRING_CHECK_ASTRING(string, "01234", 8);
+    ACUTILSTEST_ASTRING_CHECK_REALLOC(0);
+    ACUTILS_ASSERT_UINT_EQ(AString_replaceRangeCString(&string, 3, 666, nullptr, 3), true);
+    ACUTILSTEST_ASTRING_CHECK_ASTRING(string, "012", 8);
+    ACUTILSTEST_ASTRING_CHECK_REALLOC(0);
+    ACUTILS_ASSERT_UINT_EQ(AString_replaceRangeCString(&string, 0, 4, nullptr, 3), true);
+    ACUTILSTEST_ASTRING_CHECK_ASTRING(string, "", 8);
+    ACUTILSTEST_ASTRING_CHECK_REALLOC(0);
+    private_ACUtilsTest_AString_destructTestString(string);
+}
+END_TEST
+START_TEST(test_AString_replaceRangeCString_success_smallerReplaceLength)
+{
+    struct AString string = private_ACUtilsTest_AString_constructTestString("012xxx45", 8);
+    private_ACUtilsTest_AString_setReallocFail(false, 0);
+    ACUTILS_ASSERT_UINT_EQ(AString_replaceRangeCString(&string, 3, 3, "3", 1), true);
+    ACUTILSTEST_ASTRING_CHECK_ASTRING(string, "012345", 8);
+    ACUTILSTEST_ASTRING_CHECK_REALLOC(0);
+    private_ACUtilsTest_AString_destructTestString(string);
+}
+END_TEST
+START_TEST(test_AString_replaceRangeCString_success_biggerReplaceLength)
+{
+    struct AString string = private_ACUtilsTest_AString_constructTestString("012x67", 8);
+    private_ACUtilsTest_AString_setReallocFail(false, 0);
+    ACUTILS_ASSERT_UINT_EQ(AString_replaceRangeCString(&string, 3, 1, "345", 3), true);
+    ACUTILSTEST_ASTRING_CHECK_ASTRING(string, "01234567", 8);
+    ACUTILSTEST_ASTRING_CHECK_REALLOC(0);
+    private_ACUtilsTest_AString_destructTestString(string);
+}
+END_TEST
+START_TEST(test_AString_replaceRangeCString_success_biggerReplaceLength_bufferExpanded)
+{
+    struct AString string = private_ACUtilsTest_AString_constructTestString("012x678", 8);
+    private_ACUtilsTest_AString_setReallocFail(false, 0);
+    ACUTILS_ASSERT_UINT_EQ(AString_replaceRangeCString(&string, 3, 1, "345", 3), true);
+    ACUTILSTEST_ASTRING_CHECK_ASTRING(string, "012345678", 16);
+    ACUTILSTEST_ASTRING_CHECK_REALLOC(1);
+    private_ACUtilsTest_AString_destructTestString(string);
+}
+END_TEST
+START_TEST(test_AString_replaceRangeCString_success_zeroReplaceLength)
+{
+    struct AString string = private_ACUtilsTest_AString_constructTestString("012xx345", 8);
+    private_ACUtilsTest_AString_setReallocFail(false, 0);
+    ACUTILS_ASSERT_UINT_EQ(AString_replaceRangeCString(&string, 3, 2, "test", 0), true);
+    ACUTILSTEST_ASTRING_CHECK_ASTRING(string, "012345", 8);
+    ACUTILSTEST_ASTRING_CHECK_REALLOC(0);
+    private_ACUtilsTest_AString_destructTestString(string);
+}
+END_TEST
+START_TEST(test_AString_replaceRangeCString_success_indexInBoundsRangeBeyondSize)
+{
+    struct AString string = private_ACUtilsTest_AString_constructTestString("01234x", 8);
+    private_ACUtilsTest_AString_setReallocFail(false, 0);
+    ACUTILS_ASSERT_UINT_EQ(AString_replaceRangeCString(&string, 5, 666, "5x", 2), true);
+    ACUTILSTEST_ASTRING_CHECK_ASTRING(string, "012345x", 8);
+    ACUTILSTEST_ASTRING_CHECK_REALLOC(0);
+    ACUTILS_ASSERT_UINT_EQ(AString_replaceRangeCString(&string, 6, 42, "67", 2), true);
+    ACUTILSTEST_ASTRING_CHECK_ASTRING(string, "01234567", 8);
+    ACUTILSTEST_ASTRING_CHECK_REALLOC(0);
+    private_ACUtilsTest_AString_destructTestString(string);
+}
+END_TEST
+START_TEST(test_AString_replaceRangeCString_success_indexInBoundsRangeBeyondSize_bufferExpanded)
+{
+    struct AString string = private_ACUtilsTest_AString_constructTestString("01234x", 8);
+    private_ACUtilsTest_AString_setReallocFail(false, 0);
+    ACUTILS_ASSERT_UINT_EQ(AString_replaceRangeCString(&string, 5, 666, "5678", 4), true);
+    ACUTILSTEST_ASTRING_CHECK_ASTRING(string, "012345678", 16);
+    ACUTILSTEST_ASTRING_CHECK_REALLOC(1);
+    private_ACUtilsTest_AString_destructTestString(string);
+}
+END_TEST
+START_TEST(test_AString_replaceRangeCString_success_indexAndRangeBeyondSize)
+{
+    struct AString string = private_ACUtilsTest_AString_constructTestString("0123", 8);
+    private_ACUtilsTest_AString_setReallocFail(false, 0);
+    ACUTILS_ASSERT_UINT_EQ(AString_replaceRangeCString(&string, 4, 666, "45", 2), true);
+    ACUTILSTEST_ASTRING_CHECK_ASTRING(string, "012345", 8);
+    ACUTILSTEST_ASTRING_CHECK_REALLOC(0);
+    ACUTILS_ASSERT_UINT_EQ(AString_replaceRangeCString(&string, 666, 42, "67", 2), true);
+    ACUTILSTEST_ASTRING_CHECK_ASTRING(string, "01234567", 8);
+    ACUTILSTEST_ASTRING_CHECK_REALLOC(0);
+    private_ACUtilsTest_AString_destructTestString(string);
+}
+END_TEST
+START_TEST(test_AString_replaceRangeCString_success_indexAndRangeBeyondSize_bufferExpanded)
+{
+    struct AString string = private_ACUtilsTest_AString_constructTestString("012345", 8);
+    private_ACUtilsTest_AString_setReallocFail(false, 0);
+    ACUTILS_ASSERT_UINT_EQ(AString_replaceRangeCString(&string, 42, 666, "678", 3), true);
+    ACUTILSTEST_ASTRING_CHECK_ASTRING(string, "012345678", 16);
+    ACUTILSTEST_ASTRING_CHECK_REALLOC(1);
+    private_ACUtilsTest_AString_destructTestString(string);
+}
+END_TEST
+START_TEST(test_AString_replaceRangeCString_failure_indexInBoundsRangeBeyondSize_bufferExpansionFailed)
+{
+    struct AString string = private_ACUtilsTest_AString_constructTestString("01234x", 8);
+    private_ACUtilsTest_AString_setReallocFail(true, 0);
+    ACUTILS_ASSERT_UINT_EQ(AString_replaceRangeCString(&string, 5, 666, "5678", 4), false);
+    ACUTILSTEST_ASTRING_CHECK_ASTRING(string, "01234x", 8);
+    ACUTILSTEST_ASTRING_CHECK_REALLOC(0);
+    private_ACUtilsTest_AString_destructTestString(string);
+}
+END_TEST
+START_TEST(test_AString_replaceRangeCString_failure_indexAndRangeBeyondSize_bufferExpansionFailed)
+{
+    struct AString string = private_ACUtilsTest_AString_constructTestString("012345", 8);
+    private_ACUtilsTest_AString_setReallocFail(true, 0);
+    ACUTILS_ASSERT_UINT_EQ(AString_replaceRangeCString(&string, 42, 666, "678", 3), false);
+    ACUTILSTEST_ASTRING_CHECK_ASTRING(string, "012345", 8);
+    ACUTILSTEST_ASTRING_CHECK_REALLOC(0);
+    private_ACUtilsTest_AString_destructTestString(string);
+}
+END_TEST
+START_TEST(test_AString_replaceRangeCString_failure_nullptrDestString)
+{
+    private_ACUtilsTest_AString_setReallocFail(false, 0);
+    private_ACUtilsTest_AString_reallocCount = 0;
+    ACUTILS_ASSERT_UINT_EQ(AString_replaceRangeCString(nullptr, 0, 0, "123", 3), false);
+    ACUTILSTEST_ASTRING_CHECK_REALLOC(0);
+}
+END_TEST
+
+
+START_TEST(test_AString_replaceRangeAString_success_indexAndRangeInBounds)
+{
+    struct AString string = private_ACUtilsTest_AString_constructTestString("xx2xx5xx", 8);
+    struct AString replacement = private_ACUtilsTest_AString_constructTestString("01", 2);
+    private_ACUtilsTest_AString_setReallocFail(false, 0);
+    ACUTILS_ASSERT_UINT_EQ(AString_replaceRangeAString(&string, 0, 2, &replacement), true);
+    ACUTILSTEST_ASTRING_CHECK_ASTRING(string, "012xx5xx", 8);
+    ACUTILSTEST_ASTRING_CHECK_ASTRING(replacement, "01", 2);
+    ACUTILSTEST_ASTRING_CHECK_REALLOC(0);
+    memcpy(replacement.buffer, "34", 2);
+    ACUTILS_ASSERT_UINT_EQ(AString_replaceRangeAString(&string, 3, 2, &replacement), true);
+    ACUTILSTEST_ASTRING_CHECK_ASTRING(string, "012345xx", 8);
+    ACUTILSTEST_ASTRING_CHECK_ASTRING(replacement, "34", 2);
+    ACUTILSTEST_ASTRING_CHECK_REALLOC(0);
+    memcpy(replacement.buffer, "67", 2);
+    ACUTILS_ASSERT_UINT_EQ(AString_replaceRangeAString(&string, 6, 2, &replacement), true);
+    ACUTILSTEST_ASTRING_CHECK_ASTRING(string, "01234567", 8);
+    ACUTILSTEST_ASTRING_CHECK_ASTRING(replacement, "67", 2);
+    ACUTILSTEST_ASTRING_CHECK_REALLOC(0);
+    private_ACUtilsTest_AString_destructTestString(string);
+    private_ACUtilsTest_AString_destructTestString(replacement);
+}
+END_TEST
+START_TEST(test_AString_replaceRangeAString_success_zeroCount)
+{
+    struct AString string = private_ACUtilsTest_AString_constructTestString("01267", 8);
+    struct AString replacement = private_ACUtilsTest_AString_constructTestString("345", 3);
+    private_ACUtilsTest_AString_setReallocFail(false, 0);
+    ACUTILS_ASSERT_UINT_EQ(AString_replaceRangeAString(&string, 3, 0, &replacement), true);
+    ACUTILSTEST_ASTRING_CHECK_ASTRING(string, "01234567", 8);
+    ACUTILSTEST_ASTRING_CHECK_ASTRING(replacement, "345", 3);
+    ACUTILSTEST_ASTRING_CHECK_REALLOC(0);
+    private_ACUtilsTest_AString_destructTestString(string);
+    private_ACUtilsTest_AString_destructTestString(replacement);
+}
+END_TEST
+START_TEST(test_AString_replaceRangeAString_success_nullptrReplaceString)
+{
+    struct AString string = private_ACUtilsTest_AString_constructTestString("012xxx34", 8);
+    private_ACUtilsTest_AString_setReallocFail(false, 0);
+    ACUTILS_ASSERT_UINT_EQ(AString_replaceRangeAString(&string, 666, 42, nullptr), true);
+    ACUTILSTEST_ASTRING_CHECK_ASTRING(string, "012xxx34", 8);
+    ACUTILSTEST_ASTRING_CHECK_REALLOC(0);
+    ACUTILS_ASSERT_UINT_EQ(AString_replaceRangeAString(&string, 3, 3, nullptr), true);
+    ACUTILSTEST_ASTRING_CHECK_ASTRING(string, "01234", 8);
+    ACUTILSTEST_ASTRING_CHECK_REALLOC(0);
+    ACUTILS_ASSERT_UINT_EQ(AString_replaceRangeAString(&string, 3, 666, nullptr), true);
+    ACUTILSTEST_ASTRING_CHECK_ASTRING(string, "012", 8);
+    ACUTILSTEST_ASTRING_CHECK_REALLOC(0);
+    ACUTILS_ASSERT_UINT_EQ(AString_replaceRangeAString(&string, 0, 4, nullptr), true);
+    ACUTILSTEST_ASTRING_CHECK_ASTRING(string, "", 8);
+    ACUTILSTEST_ASTRING_CHECK_REALLOC(0);
+    private_ACUtilsTest_AString_destructTestString(string);
+}
+END_TEST
+START_TEST(test_AString_replaceRangeAString_success_smallerReplaceLength)
+{
+    struct AString string = private_ACUtilsTest_AString_constructTestString("012xxx45", 8);
+    struct AString replacement = private_ACUtilsTest_AString_constructTestString("3", 1);
+    private_ACUtilsTest_AString_setReallocFail(false, 0);
+    ACUTILS_ASSERT_UINT_EQ(AString_replaceRangeAString(&string, 3, 3, &replacement), true);
+    ACUTILSTEST_ASTRING_CHECK_ASTRING(string, "012345", 8);
+    ACUTILSTEST_ASTRING_CHECK_ASTRING(replacement, "3", 1);
+    ACUTILSTEST_ASTRING_CHECK_REALLOC(0);
+    private_ACUtilsTest_AString_destructTestString(string);
+    private_ACUtilsTest_AString_destructTestString(replacement);
+}
+END_TEST
+START_TEST(test_AString_replaceRangeAString_success_biggerReplaceLength)
+{
+    struct AString string = private_ACUtilsTest_AString_constructTestString("012x67", 8);
+    struct AString replacement = private_ACUtilsTest_AString_constructTestString("345", 3);
+    private_ACUtilsTest_AString_setReallocFail(false, 0);
+    ACUTILS_ASSERT_UINT_EQ(AString_replaceRangeAString(&string, 3, 1, &replacement), true);
+    ACUTILSTEST_ASTRING_CHECK_ASTRING(string, "01234567", 8);
+    ACUTILSTEST_ASTRING_CHECK_ASTRING(replacement, "345", 3);
+    ACUTILSTEST_ASTRING_CHECK_REALLOC(0);
+    private_ACUtilsTest_AString_destructTestString(string);
+    private_ACUtilsTest_AString_destructTestString(replacement);
+}
+END_TEST
+START_TEST(test_AString_replaceRangeAString_success_biggerReplaceLength_bufferExpanded)
+{
+    struct AString string = private_ACUtilsTest_AString_constructTestString("012x678", 8);
+    struct AString replacement = private_ACUtilsTest_AString_constructTestString("345", 3);
+    private_ACUtilsTest_AString_setReallocFail(false, 0);
+    ACUTILS_ASSERT_UINT_EQ(AString_replaceRangeAString(&string, 3, 1, &replacement), true);
+    ACUTILSTEST_ASTRING_CHECK_ASTRING(string, "012345678", 16);
+    ACUTILSTEST_ASTRING_CHECK_ASTRING(replacement, "345", 3);
+    ACUTILSTEST_ASTRING_CHECK_REALLOC(1);
+    private_ACUtilsTest_AString_destructTestString(string);
+    private_ACUtilsTest_AString_destructTestString(replacement);
+}
+END_TEST
+START_TEST(test_AString_replaceRangeAString_success_zeroReplaceLength)
+{
+    struct AString string = private_ACUtilsTest_AString_constructTestString("012xx345", 8);
+    struct AString replacement = private_ACUtilsTest_AString_constructTestString("", 0);
+    private_ACUtilsTest_AString_setReallocFail(false, 0);
+    ACUTILS_ASSERT_UINT_EQ(AString_replaceRangeCString(&string, 3, 2, "test", 0), true);
+    ACUTILSTEST_ASTRING_CHECK_ASTRING(string, "012345", 8);
+    ACUTILSTEST_ASTRING_CHECK_ASTRING(replacement, "", 0);
+    ACUTILSTEST_ASTRING_CHECK_REALLOC(0);
+    private_ACUtilsTest_AString_destructTestString(string);
+    private_ACUtilsTest_AString_destructTestString(replacement);
+}
+END_TEST
+START_TEST(test_AString_replaceRangeAString_success_indexInBoundsRangeBeyondSize)
+{
+    struct AString string = private_ACUtilsTest_AString_constructTestString("01234x", 8);
+    struct AString replacement = private_ACUtilsTest_AString_constructTestString("5x", 2);
+    private_ACUtilsTest_AString_setReallocFail(false, 0);
+    ACUTILS_ASSERT_UINT_EQ(AString_replaceRangeAString(&string, 5, 666, &replacement), true);
+    ACUTILSTEST_ASTRING_CHECK_ASTRING(string, "012345x", 8);
+    ACUTILSTEST_ASTRING_CHECK_ASTRING(replacement, "5x", 2);
+    ACUTILSTEST_ASTRING_CHECK_REALLOC(0);
+    memcpy(replacement.buffer, "67", 2);
+    ACUTILS_ASSERT_UINT_EQ(AString_replaceRangeAString(&string, 6, 42, &replacement), true);
+    ACUTILSTEST_ASTRING_CHECK_ASTRING(string, "01234567", 8);
+    ACUTILSTEST_ASTRING_CHECK_ASTRING(replacement, "67", 2);
+    ACUTILSTEST_ASTRING_CHECK_REALLOC(0);
+    private_ACUtilsTest_AString_destructTestString(string);
+    private_ACUtilsTest_AString_destructTestString(replacement);
+}
+END_TEST
+START_TEST(test_AString_replaceRangeAString_success_indexInBoundsRangeBeyondSize_bufferExpanded)
+{
+    struct AString string = private_ACUtilsTest_AString_constructTestString("01234x", 8);
+    struct AString replacement = private_ACUtilsTest_AString_constructTestString("5678", 4);
+    private_ACUtilsTest_AString_setReallocFail(false, 0);
+    ACUTILS_ASSERT_UINT_EQ(AString_replaceRangeAString(&string, 5, 666, &replacement), true);
+    ACUTILSTEST_ASTRING_CHECK_ASTRING(string, "012345678", 16);
+    ACUTILSTEST_ASTRING_CHECK_ASTRING(replacement, "5678", 4);
+    ACUTILSTEST_ASTRING_CHECK_REALLOC(1);
+    private_ACUtilsTest_AString_destructTestString(string);
+    private_ACUtilsTest_AString_destructTestString(replacement);
+}
+END_TEST
+START_TEST(test_AString_replaceRangeAString_success_indexAndRangeBeyondSize)
+{
+    struct AString string = private_ACUtilsTest_AString_constructTestString("0123", 8);
+    struct AString replacement = private_ACUtilsTest_AString_constructTestString("45", 2);
+    private_ACUtilsTest_AString_setReallocFail(false, 0);
+    ACUTILS_ASSERT_UINT_EQ(AString_replaceRangeAString(&string, 4, 666, &replacement), true);
+    ACUTILSTEST_ASTRING_CHECK_ASTRING(string, "012345", 8);
+    ACUTILSTEST_ASTRING_CHECK_ASTRING(replacement, "45", 2);
+    ACUTILSTEST_ASTRING_CHECK_REALLOC(0);
+    memcpy(replacement.buffer, "67", 2);
+    ACUTILS_ASSERT_UINT_EQ(AString_replaceRangeAString(&string, 666, 42, &replacement), true);
+    ACUTILSTEST_ASTRING_CHECK_ASTRING(string, "01234567", 8);
+    ACUTILSTEST_ASTRING_CHECK_ASTRING(replacement, "67", 2);
+    ACUTILSTEST_ASTRING_CHECK_REALLOC(0);
+    private_ACUtilsTest_AString_destructTestString(string);
+    private_ACUtilsTest_AString_destructTestString(replacement);
+}
+END_TEST
+START_TEST(test_AString_replaceRangeAString_success_indexAndRangeBeyondSize_bufferExpanded)
+{
+    struct AString string = private_ACUtilsTest_AString_constructTestString("012345", 8);
+    struct AString replacement = private_ACUtilsTest_AString_constructTestString("678", 3);
+    private_ACUtilsTest_AString_setReallocFail(false, 0);
+    ACUTILS_ASSERT_UINT_EQ(AString_replaceRangeAString(&string, 42, 666, &replacement), true);
+    ACUTILSTEST_ASTRING_CHECK_ASTRING(string, "012345678", 16);
+    ACUTILSTEST_ASTRING_CHECK_ASTRING(replacement, "678", 3);
+    ACUTILSTEST_ASTRING_CHECK_REALLOC(1);
+    private_ACUtilsTest_AString_destructTestString(string);
+    private_ACUtilsTest_AString_destructTestString(replacement);
+}
+END_TEST
+START_TEST(test_AString_replaceRangeAString_failure_indexInBoundsRangeBeyondSize_bufferExpansionFailed)
+{
+    struct AString string = private_ACUtilsTest_AString_constructTestString("01234x", 8);
+    struct AString replacement = private_ACUtilsTest_AString_constructTestString("5678", 4);
+    private_ACUtilsTest_AString_setReallocFail(true, 0);
+    ACUTILS_ASSERT_UINT_EQ(AString_replaceRangeAString(&string, 5, 666, &replacement), false);
+    ACUTILSTEST_ASTRING_CHECK_ASTRING(string, "01234x", 8);
+    ACUTILSTEST_ASTRING_CHECK_ASTRING(replacement, "5678", 4);
+    ACUTILSTEST_ASTRING_CHECK_REALLOC(0);
+    private_ACUtilsTest_AString_destructTestString(string);
+    private_ACUtilsTest_AString_destructTestString(replacement);
+}
+END_TEST
+START_TEST(test_AString_replaceRangeAString_failure_indexAndRangeBeyondSize_bufferExpansionFailed)
+{
+    struct AString string = private_ACUtilsTest_AString_constructTestString("012345", 8);
+    struct AString replacement = private_ACUtilsTest_AString_constructTestString("678", 3);
+    private_ACUtilsTest_AString_setReallocFail(true, 0);
+    ACUTILS_ASSERT_UINT_EQ(AString_replaceRangeCString(&string, 42, 666, "678", 3), false);
+    ACUTILSTEST_ASTRING_CHECK_ASTRING(string, "012345", 8);
+    ACUTILSTEST_ASTRING_CHECK_ASTRING(replacement, "678", 3);
+    ACUTILSTEST_ASTRING_CHECK_REALLOC(0);
+    private_ACUtilsTest_AString_destructTestString(string);
+    private_ACUtilsTest_AString_destructTestString(replacement);
+}
+END_TEST
+START_TEST(test_AString_replaceRangeAString_failure_nullptrDestString)
+{
+    private_ACUtilsTest_AString_setReallocFail(false, 0);
+    struct AString replacement = private_ACUtilsTest_AString_constructTestString("123", 3);
+    private_ACUtilsTest_AString_reallocCount = 0;
+    ACUTILS_ASSERT_UINT_EQ(AString_replaceRangeAString(nullptr, 0, 0, &replacement), false);
+    ACUTILSTEST_ASTRING_CHECK_ASTRING(replacement, "123", 3);
+    ACUTILSTEST_ASTRING_CHECK_REALLOC(0);
+    private_ACUtilsTest_AString_destructTestString(replacement);
+}
+END_TEST
+
+
 START_TEST(test_AString_equals_valid)
 {
     struct AString string1 = private_ACUtilsTest_AString_constructTestString("012345", 8);
@@ -1780,7 +2301,8 @@ ACUTILS_EXTERN_C Suite* private_ACUtilsTest_AString_getTestSuite(void)
           *test_case_AString_trimFront, *test_case_AString_trimBack, *test_case_AString_insert,
           *test_case_AString_insertCString, *test_case_AString_insertAString, *test_case_AString_append,
           *test_case_AString_appendCString, *test_case_AString_appendAString, *test_case_AString_get,
-          *test_case_AString_set, *test_case_AString_setRange, *test_case_AString_equals,
+          *test_case_AString_set, *test_case_AString_setRange, *test_case_AString_replaceRange,
+          *test_case_AString_replaceRangeCString, *test_case_AString_replaceRangeAString, *test_case_AString_equals,
           *test_case_AString_equalsCString, *test_case_AString_compare, *test_case_AString_compareCString,
           *test_case_AString_clone, *test_case_AString_substring, *test_case_AString_split;
 
@@ -1958,6 +2480,57 @@ ACUTILS_EXTERN_C Suite* private_ACUtilsTest_AString_getTestSuite(void)
     tcase_add_test(test_case_AString_setRange, test_AString_setRange_failure_indexAndRangeBeyondSize_bufferExpansionFailed);
     tcase_add_test(test_case_AString_setRange, test_AString_setRange_failure_nullptr);
     suite_add_tcase(s, test_case_AString_setRange);
+
+    test_case_AString_replaceRange = tcase_create("AString Test Case: AString_replaceRange");
+    tcase_add_test(test_case_AString_replaceRange, test_AString_replaceRange_success_indexAndRangeInBounds);
+    tcase_add_test(test_case_AString_replaceRange, test_AString_replaceRange_success_zeroCount);
+    tcase_add_test(test_case_AString_replaceRange, test_AString_replaceRange_success_smallerReplaceLength);
+    tcase_add_test(test_case_AString_replaceRange, test_AString_replaceRange_success_biggerReplaceLength);
+    tcase_add_test(test_case_AString_replaceRange, test_AString_replaceRange_success_biggerReplaceLength_bufferExpanded);
+    tcase_add_test(test_case_AString_replaceRange, test_AString_replaceRange_success_zeroReplaceLength);
+    tcase_add_test(test_case_AString_replaceRange, test_AString_replaceRange_success_indexInBoundsRangeBeyondSize);
+    tcase_add_test(test_case_AString_replaceRange, test_AString_replaceRange_success_indexInBoundsRangeBeyondSize_bufferExpanded);
+    tcase_add_test(test_case_AString_replaceRange, test_AString_replaceRange_success_indexAndRangeBeyondSize);
+    tcase_add_test(test_case_AString_replaceRange, test_AString_replaceRange_success_indexAndRangeBeyondSize_bufferExpanded);
+    tcase_add_test(test_case_AString_replaceRange, test_AString_replaceRange_failure_indexInBoundsRangeBeyondSize_bufferExpansionFailed);
+    tcase_add_test(test_case_AString_replaceRange, test_AString_replaceRange_failure_indexAndRangeBeyondSize_bufferExpansionFailed);
+    tcase_add_test(test_case_AString_replaceRange, test_AString_replaceRange_failure_nullptrDestString);
+    suite_add_tcase(s, test_case_AString_replaceRange);
+
+    test_case_AString_replaceRangeCString = tcase_create("AString Test Case: AString_replaceRangeCString");
+    tcase_add_test(test_case_AString_replaceRangeCString, test_AString_replaceRangeCString_success_indexAndRangeInBounds);
+    tcase_add_test(test_case_AString_replaceRangeCString, test_AString_replaceRangeCString_success_zeroCount);
+    tcase_add_test(test_case_AString_replaceRangeCString, test_AString_replaceRangeCString_success_notAllOfReplaceArray);
+    tcase_add_test(test_case_AString_replaceRangeCString, test_AString_replaceRangeCString_success_nullptrReplaceArray);
+    tcase_add_test(test_case_AString_replaceRangeCString, test_AString_replaceRangeCString_success_smallerReplaceLength);
+    tcase_add_test(test_case_AString_replaceRangeCString, test_AString_replaceRangeCString_success_biggerReplaceLength);
+    tcase_add_test(test_case_AString_replaceRangeCString, test_AString_replaceRangeCString_success_biggerReplaceLength_bufferExpanded);
+    tcase_add_test(test_case_AString_replaceRangeCString, test_AString_replaceRangeCString_success_zeroReplaceLength);
+    tcase_add_test(test_case_AString_replaceRangeCString, test_AString_replaceRangeCString_success_indexInBoundsRangeBeyondSize);
+    tcase_add_test(test_case_AString_replaceRangeCString, test_AString_replaceRangeCString_success_indexInBoundsRangeBeyondSize_bufferExpanded);
+    tcase_add_test(test_case_AString_replaceRangeCString, test_AString_replaceRangeCString_success_indexAndRangeBeyondSize);
+    tcase_add_test(test_case_AString_replaceRangeCString, test_AString_replaceRangeCString_success_indexAndRangeBeyondSize_bufferExpanded);
+    tcase_add_test(test_case_AString_replaceRangeCString, test_AString_replaceRangeCString_failure_indexInBoundsRangeBeyondSize_bufferExpansionFailed);
+    tcase_add_test(test_case_AString_replaceRangeCString, test_AString_replaceRangeCString_failure_indexAndRangeBeyondSize_bufferExpansionFailed);
+    tcase_add_test(test_case_AString_replaceRangeCString, test_AString_replaceRangeCString_failure_nullptrDestString);
+    suite_add_tcase(s, test_case_AString_replaceRangeCString);
+
+    test_case_AString_replaceRangeAString = tcase_create("AString Test Case: AString_replaceRangeAString");
+    tcase_add_test(test_case_AString_replaceRangeAString, test_AString_replaceRangeAString_success_indexAndRangeInBounds);
+    tcase_add_test(test_case_AString_replaceRangeAString, test_AString_replaceRangeAString_success_zeroCount);
+    tcase_add_test(test_case_AString_replaceRangeAString, test_AString_replaceRangeAString_success_nullptrReplaceString);
+    tcase_add_test(test_case_AString_replaceRangeAString, test_AString_replaceRangeAString_success_smallerReplaceLength);
+    tcase_add_test(test_case_AString_replaceRangeAString, test_AString_replaceRangeAString_success_biggerReplaceLength);
+    tcase_add_test(test_case_AString_replaceRangeAString, test_AString_replaceRangeAString_success_biggerReplaceLength_bufferExpanded);
+    tcase_add_test(test_case_AString_replaceRangeAString, test_AString_replaceRangeAString_success_zeroReplaceLength);
+    tcase_add_test(test_case_AString_replaceRangeAString, test_AString_replaceRangeAString_success_indexInBoundsRangeBeyondSize);
+    tcase_add_test(test_case_AString_replaceRangeAString, test_AString_replaceRangeAString_success_indexInBoundsRangeBeyondSize_bufferExpanded);
+    tcase_add_test(test_case_AString_replaceRangeAString, test_AString_replaceRangeAString_success_indexAndRangeBeyondSize);
+    tcase_add_test(test_case_AString_replaceRangeAString, test_AString_replaceRangeAString_success_indexAndRangeBeyondSize_bufferExpanded);
+    tcase_add_test(test_case_AString_replaceRangeAString, test_AString_replaceRangeAString_failure_indexInBoundsRangeBeyondSize_bufferExpansionFailed);
+    tcase_add_test(test_case_AString_replaceRangeAString, test_AString_replaceRangeAString_failure_indexAndRangeBeyondSize_bufferExpansionFailed);
+    tcase_add_test(test_case_AString_replaceRangeAString, test_AString_replaceRangeAString_failure_nullptrDestString);
+    suite_add_tcase(s, test_case_AString_replaceRangeAString);
 
     test_case_AString_equals = tcase_create("AString Test Case: AString_equals");
     tcase_add_test(test_case_AString_equals, test_AString_equals_valid);
