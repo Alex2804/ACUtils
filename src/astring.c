@@ -292,6 +292,67 @@ ACUTILS_HD_FUNC bool AString_replaceRangeAString(struct AString *str, size_t ind
         return AString_replaceRangeCString(str, index, count, rep->buffer, rep->size);
 }
 
+ACUTILS_HD_FUNC void AString_replace(struct AString *str, char old, char new, size_t count)
+{
+    size_t i;
+    if(str == nullptr)
+        return;
+    for(i = 0; i < str->size; ++i) {
+        if(str->buffer[i] == old) {
+            str->buffer[i] = new;
+            if(count > 0 && --count == 0)
+                return;
+        }
+    }
+}
+ACUTILS_HD_FUNC bool AString_replaceCString(struct AString *str, const char *old, size_t oldLen, const char *new, size_t newLen, size_t count)
+{
+    size_t i, currentOldIndex = 0, tmpSize, tmpCapacity;
+    char *tmp;
+    if(str == nullptr || old == nullptr || oldLen == 0) {
+        return false;
+    } else if(new == nullptr) {
+        new = "";
+        newLen = 0;
+    }
+    tmpSize = str->size;
+    tmpCapacity = str->capacity;
+    tmp = malloc(tmpCapacity + 1);
+    memcpy(tmp, str->buffer, tmpSize + 1);
+    for(i = 0; i < str->size; ++i) {
+        char c = str->buffer[i];
+        if(c == old[currentOldIndex]) {
+            if(++currentOldIndex == oldLen) {
+                i -= currentOldIndex - 1;
+                if(!AString_replaceRangeCString(str, i, currentOldIndex, new, newLen)) {
+                    str->capacity = tmpCapacity;
+                    str->size = tmpSize;
+                    memcpy(str->buffer, tmp, tmpSize + 1);
+                    free(tmp);
+                    return false;
+                }
+                if(count > 0 && --count == 0)
+                    goto RETURN;
+                currentOldIndex = 0;
+            }
+        } else {
+            currentOldIndex = 0;
+        }
+    }
+    RETURN:
+    free(tmp);
+    return true;
+}
+ACUTILS_HD_FUNC bool AString_replaceAString(struct AString *str, const struct AString *old, const struct AString *new, size_t count)
+{
+    if(old == nullptr)
+        return false;
+    else if(new == nullptr)
+        return AString_replaceCString(str, old->buffer, old->size, nullptr, 0, count);
+    else
+        return AString_replaceCString(str, old->buffer, old->size, new->buffer, new->size, count);
+}
+
 ACUTILS_HD_FUNC bool AString_equals(const struct AString *str1, const struct AString *str2)
 {
     if(str2 == nullptr || str1 == nullptr)
