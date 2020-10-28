@@ -25,9 +25,22 @@ ACUTILS_HD_FUNC struct AString* AString_construct(void)
 {
     return AString_constructWithAllocator(realloc, free);
 }
+ACUTILS_HD_FUNC struct AString* AString_constructFromCString(const char *cstr, size_t len)
+{
+    return AString_constructFromCStringWithAllocator(cstr, len, realloc, free);
+}
 ACUTILS_HD_FUNC struct AString* AString_constructWithAllocator(ACUtilsReallocator reallocator, ACUtilsDeallocator deallocator)
 {
     return AString_constructWithCapacityAndAllocator(private_ACUtils_AString_capacityMin, reallocator, deallocator);
+}
+struct AString *AString_constructFromCStringWithAllocator(const char *cstr, size_t len, ACUtilsReallocator reallocator, ACUtilsDeallocator deallocator)
+{
+    struct AString *string;
+    string = AString_constructWithCapacityAndAllocator(len, reallocator, deallocator);
+    if(AString_appendCString(string, cstr, len))
+        return string;
+    AString_destruct(string);
+    return nullptr;
 }
 ACUTILS_HD_FUNC struct AString* AString_constructWithCapacityAndAllocator(size_t capacity, ACUtilsReallocator reallocator, ACUtilsDeallocator deallocator)
 {

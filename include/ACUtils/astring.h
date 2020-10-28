@@ -11,7 +11,9 @@ struct AString;
 A_DYNAMIC_ARRAY_DEFINITION(ASplittedString, struct AString*);
 
 ACUTILS_HD_FUNC struct AString* AString_construct(void);
+ACUTILS_HD_FUNC struct AString* AString_constructFromCString(const char *cstr, size_t len);
 ACUTILS_HD_FUNC struct AString* AString_constructWithAllocator(ACUtilsReallocator reallocator, ACUtilsDeallocator deallocator);
+ACUTILS_HD_FUNC struct AString* AString_constructFromCStringWithAllocator(const char *cstr, size_t len, ACUtilsReallocator reallocator, ACUtilsDeallocator deallocator);
 ACUTILS_HD_FUNC struct AString* AString_constructWithCapacityAndAllocator(size_t capacity, ACUtilsReallocator reallocator, ACUtilsDeallocator deallocator);
 ACUTILS_HD_FUNC void AString_destruct(struct AString *str);
 

@@ -87,6 +87,16 @@ START_TEST(test_AString_construct_destruct_valid)
     AString_destruct(string);
 }
 END_TEST
+START_TEST(test_AString_construct_destruct_fromCString_valid)
+{
+    struct AString *string = AString_constructFromCString("xyz1234567890", 3);
+    ACUTILSTEST_ASSERT_PTR_NONNULL(string);
+    ACUTILSTEST_ASSERT_PTR_NONNULL(string->reallocator);
+    ACUTILSTEST_ASSERT_PTR_NONNULL(string->deallocator);
+    ACUTILSTEST_ASTRING_CHECK_ASTRING(*string, "xyz", 8);
+    AString_destruct(string);
+}
+END_TEST
 START_TEST(test_AString_construct_destruct_withAllocator_valid)
 {
     struct AString *string;
@@ -97,6 +107,20 @@ START_TEST(test_AString_construct_destruct_withAllocator_valid)
     ACUTILSTEST_ASSERT_PTR_EQ(string->reallocator, private_ACUtilsTest_AString_realloc);
     ACUTILSTEST_ASSERT_PTR_EQ(string->deallocator, private_ACUtilsTest_AString_free);
     ACUTILSTEST_ASTRING_CHECK_ASTRING(*string, "", 8);
+    AString_destruct(string);
+    ACUTILSTEST_ASSERT_UINT_EQ(private_ACUtilsTest_AString_reallocCount, private_ACUtilsTest_AString_freeCount);
+}
+END_TEST
+START_TEST(test_AString_construct_destruct_fromCStringWithAllocator_valid)
+{
+    struct AString *string;
+    private_ACUtilsTest_AString_setReallocFail(false, 0);
+    private_ACUtilsTest_AString_reallocCount = private_ACUtilsTest_AString_freeCount = 0;
+    string = AString_constructFromCStringWithAllocator("xyz1234567890", 3, private_ACUtilsTest_AString_realloc, private_ACUtilsTest_AString_free);
+    ACUTILSTEST_ASSERT_PTR_NONNULL(string);
+    ACUTILSTEST_ASSERT_PTR_EQ(string->reallocator, private_ACUtilsTest_AString_realloc);
+    ACUTILSTEST_ASSERT_PTR_EQ(string->deallocator, private_ACUtilsTest_AString_free);
+    ACUTILSTEST_ASTRING_CHECK_ASTRING(*string, "xyz", 8);
     AString_destruct(string);
     ACUTILSTEST_ASSERT_UINT_EQ(private_ACUtilsTest_AString_reallocCount, private_ACUtilsTest_AString_freeCount);
 }
@@ -126,6 +150,17 @@ START_TEST(test_AString_construct_destruct_withAllocator_invalid)
     ACUTILSTEST_ASSERT_PTR_NULL(string);
 }
 END_TEST
+START_TEST(test_AString_construct_destruct_fromCStringWithAllocator_invalid)
+{
+    struct AString *string;
+    private_ACUtilsTest_AString_setReallocFail(false, 0);
+    private_ACUtilsTest_AString_reallocCount = private_ACUtilsTest_AString_freeCount = 0;
+    string = AString_constructFromCStringWithAllocator("xyz1234567890", 3, nullptr, private_ACUtilsTest_AString_free);
+    ACUTILSTEST_ASSERT_PTR_NULL(string);
+    string = AString_constructFromCStringWithAllocator("xyz1234567890", 3, private_ACUtilsTest_AString_realloc, nullptr);
+    ACUTILSTEST_ASSERT_PTR_NULL(string);
+}
+END_TEST
 START_TEST(test_AString_construct_destruct_withCapacityAndAllocator_invalid)
 {
     struct AString *string;
@@ -148,6 +183,22 @@ START_TEST(test_AString_construct_destruct_withAllocator_noMemoryAvailable)
     ACUTILSTEST_ASTRING_CHECK_REALLOC(private_ACUtilsTest_AString_freeCount);
     private_ACUtilsTest_AString_setReallocFail(true, 1);
     string = AString_constructWithAllocator(private_ACUtilsTest_AString_realloc, private_ACUtilsTest_AString_free);
+    ACUTILSTEST_ASSERT_PTR_NULL(string);
+    ACUTILSTEST_ASTRING_CHECK_REALLOC(1);
+    ACUTILSTEST_ASTRING_CHECK_REALLOC(private_ACUtilsTest_AString_freeCount);
+}
+END_TEST
+START_TEST(test_AString_construct_destruct_fromCStringWithAllocator_noMemoryAvailable)
+{
+    struct AString *string;
+    private_ACUtilsTest_AString_setReallocFail(true, 0);
+    private_ACUtilsTest_AString_reallocCount = private_ACUtilsTest_AString_freeCount = 0;
+    string = AString_constructFromCStringWithAllocator("xyz1234567890", 3, private_ACUtilsTest_AString_realloc, private_ACUtilsTest_AString_free);
+    ACUTILSTEST_ASSERT_PTR_NULL(string);
+    ACUTILSTEST_ASTRING_CHECK_REALLOC(0);
+    ACUTILSTEST_ASTRING_CHECK_REALLOC(private_ACUtilsTest_AString_freeCount);
+    private_ACUtilsTest_AString_setReallocFail(true, 1);
+    string = AString_constructFromCStringWithAllocator("xyz1234567890", 3, private_ACUtilsTest_AString_realloc, private_ACUtilsTest_AString_free);
     ACUTILSTEST_ASSERT_PTR_NULL(string);
     ACUTILSTEST_ASTRING_CHECK_REALLOC(1);
     ACUTILSTEST_ASTRING_CHECK_REALLOC(private_ACUtilsTest_AString_freeCount);
@@ -2627,11 +2678,15 @@ ACUTILS_EXTERN_C Suite* private_ACUtilsTest_AString_getTestSuite(void)
 
     test_case_AString_construct_destruct = tcase_create("AString Test Case: AString_construct / AString_destruct");
     tcase_add_test(test_case_AString_construct_destruct, test_AString_construct_destruct_valid);
+    tcase_add_test(test_case_AString_construct_destruct, test_AString_construct_destruct_fromCString_valid);
     tcase_add_test(test_case_AString_construct_destruct, test_AString_construct_destruct_withAllocator_valid);
+    tcase_add_test(test_case_AString_construct_destruct, test_AString_construct_destruct_fromCStringWithAllocator_valid);
     tcase_add_test(test_case_AString_construct_destruct, test_AString_construct_destruct_withCapacityAndAllocator_valid);
     tcase_add_test(test_case_AString_construct_destruct, test_AString_construct_destruct_withAllocator_invalid);
+    tcase_add_test(test_case_AString_construct_destruct, test_AString_construct_destruct_fromCStringWithAllocator_invalid);
     tcase_add_test(test_case_AString_construct_destruct, test_AString_construct_destruct_withCapacityAndAllocator_invalid);
     tcase_add_test(test_case_AString_construct_destruct, test_AString_construct_destruct_withAllocator_noMemoryAvailable);
+    tcase_add_test(test_case_AString_construct_destruct, test_AString_construct_destruct_fromCStringWithAllocator_noMemoryAvailable);
     tcase_add_test(test_case_AString_construct_destruct, test_AString_construct_destruct_withCapacityAndAllocator_noMemoryAvailable);
     tcase_add_test(test_case_AString_construct_destruct, test_AString_construct_destruct_nullptr);
     suite_add_tcase(s, test_case_AString_construct_destruct);
